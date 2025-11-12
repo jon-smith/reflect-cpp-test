@@ -1,0 +1,88 @@
+{
+    "version": 3,
+    "configurePresets": [
+      {
+        "name": "base",
+        "hidden": true,
+        "generator": "Ninja",
+        "binaryDir": "${sourceDir}/out/build/${presetName}",
+        "installDir": "${sourceDir}/out/install/${presetName}"
+      },
+      {
+        "name": "debug",
+        "hidden": true,
+        "inherits": "base",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug"
+        }
+      },
+      {
+        "name": "release",
+        "hidden": true,
+        "inherits": "base",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release"
+        }
+      },
+      {
+        "name": "gcc",
+        "hidden": true,
+        "displayName": "GCC",
+        "cacheVariables": {
+          "CMAKE_C_COMPILER": "gcc-14",
+          "CMAKE_CXX_COMPILER": "g++-14"
+        }
+      },
+      {
+        "name": "clang",
+        "hidden": true,
+        "displayName": "Clang",
+        "cacheVariables": {
+          "CMAKE_C_COMPILER": "clang",
+          "CMAKE_CXX_COMPILER": "clang++"
+        }
+      },
+      {
+        "name": "msvc-x64",
+        "hidden": true,
+        "displayName": "MSVC x64",
+        "cacheVariables": {
+          "CMAKE_CXX_COMPILER": "cl.exe"
+        },
+        "architecture": {
+          "value": "x64",
+          "strategy": "external"
+        }
+      },
+      {
+        "name": "gcc-debug",
+        "displayName": "GCC Debug",
+        "inherits": ["gcc", "debug"]
+      },
+      {
+        "name": "gcc-release",
+        "displayName": "GCC Release",
+        "inherits": ["gcc", "release"]
+      },
+      {
+        "name": "msvc-x64-debug",
+        "displayName": "MSVC x64 Debug",
+        "inherits": ["msvc-x64", "debug"]
+      },
+      {
+        "name": "msvc-x64-release",
+        "displayName": "MSVC x64 Release",
+        "inherits": ["msvc-x64", "release"]
+      },
+      {
+        "name": "clang-debug",
+        "displayName": "Clang Debug",
+        "inherits": ["clang", "debug"]
+      },
+      {
+        "name": "clang-release",
+        "displayName": "Clang Release",
+        "inherits": ["clang", "release"]
+      }
+    ]
+}

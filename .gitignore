@@ -1,3 +1,9 @@
+# Output
+out/
+
+# IDE
+.vscode/
+
 # Prerequisites
 *.d
 
@@ -39,3 +45,6 @@
 
 # debug information files
 *.dwo
+
+# other
+*.DS_Store
