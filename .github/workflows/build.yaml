@@ -1,0 +1,47 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+        include:
+          - os: macos-14
+            compiler: clang
+          - os: windows-2022
+            compiler: msvc-x64
+          - os: ubuntu-24.04
+            compiler: gcc
+
+    runs-on: ${{ matrix.os }}
+
+    name: Build ${{ matrix.os }} ${{ matrix.compiler }}
+
+    env:
+      preset: ${{ matrix.compiler }}-release
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Configure VS Toolchain (Windows)
+        if: matrix.os == 'windows-2022'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Config
+        run: cmake --preset ${{ env.preset }}
+
+      - name: Build CMake project
+        run: cmake --build out/build/${{ env.preset }}
