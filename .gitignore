@@ -1,6 +1,9 @@
 # Output
 out/
 
+# vcpkg
+vcpkg_installed/
+
 # IDE
 .vscode/
 
