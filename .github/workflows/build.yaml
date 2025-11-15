@@ -28,7 +28,6 @@ jobs:
 
     env:
       preset: ${{ matrix.compiler }}-release
-      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
 
     steps:
       - name: Checkout repo
