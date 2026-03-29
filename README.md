@@ -18,9 +18,52 @@ out/build/clang-release/src/reflect_cpp_test
 
 > Recommended: [VS code CMake extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools)
 
-## Progress
+## OpenAPI Demo
 
-Work done so far:
+The application now demonstrates how to turn C++ DTOs into an OpenAPI 3.1
+document for a webserver-style API.
 
-- Simple `CMake` + `vcpkg` setup
-- Code example showing JSON serialisation using `reflect-cpp`
+This demo uses `rfl::json::to_schema<T>()` to generate JSON Schema for each C++ type, rewrites those schema references from `#/$defs/...` to `#/components/schemas/...`, and assembles a minimal OpenAPI 3.1 document around them.
+
+The generated spec includes:
+
+- `GET /pets`
+- `GET /pets/{petId}`
+- `POST /pets`
+
+The component schemas are generated from C++ types such as:
+
+- `Pet`
+- `PetSummary`
+- `CreatePetRequest`
+- `PetListResponse`
+- `ErrorResponse`
+
+This is intended as a contract-generation example for a future C++ webserver.
+The routes themselves are declared explicitly in C++, while the request and
+response schemas come from `reflect-cpp`.
+
+## Run
+
+```sh
+cmake --preset clang-release # or -debug
+cmake --build out/build/clang-release
+out/build/clang-release/src/reflect_cpp_test
+```
+
+The binary prints a pretty-formatted OpenAPI 3.1 JSON document to `stdout`.
+
+## Verify
+
+The repo also wires in a lightweight smoke test that validates the generated
+document:
+
+```sh
+ctest --test-dir out/build/clang-release --output-on-failure
+```
+
+Or run the executable directly:
+
+```sh
+out/build/clang-release/src/reflect_cpp_test --check
+```
