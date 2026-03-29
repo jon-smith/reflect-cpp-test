@@ -8,7 +8,8 @@ Repo for testing the reflect-cpp library
 
 > Other OS/compiler configurations shown in build.yaml
 
-Requires `CMake 3.23` and `clang 16`.
+Requires `CMake 3.23` and a compiler with C++23 library support, such as
+`clang 16`.
 
 ```sh
 cmake --preset clang-release # or -debug

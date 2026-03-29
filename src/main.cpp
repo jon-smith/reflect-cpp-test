@@ -1,9 +1,9 @@
 #include <iostream>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
+#include <expected>
 
 #include <rfl.hpp>
 #include <rfl/json.hpp>
@@ -96,39 +96,48 @@ namespace
     return JsonArray(values);
   }
 
-  Json parse_json_or_throw(const std::string &json)
+  using ExpectedJson = std::expected<Json, std::string>;
+  using ExpectedJsonObject = std::expected<JsonObject, std::string>;
+  using ExpectedString = std::expected<std::string, std::string>;
+  using ExpectedVoid = std::expected<void, std::string>;
+  using ExpectedBool = std::expected<bool, std::string>;
+
+  ExpectedJson parse_json(const std::string &json)
   {
     auto result = rfl::json::read<Json>(json);
     if (!result)
     {
-      throw std::runtime_error("Failed to parse JSON: " + result.error().what());
+      return std::unexpected("Failed to parse JSON: " +
+                             result.error().what());
     }
     return result.value();
   }
 
-  JsonObject to_object_or_throw(const Json &json, std::string_view context)
+  ExpectedJsonObject to_object(const Json &json, std::string_view context)
   {
     auto result = json.to_object();
     if (!result)
     {
-      throw std::runtime_error("Expected JSON object for " + std::string(context) +
-                               ": " + result.error().what());
+      return std::unexpected("Expected JSON object for " +
+                             std::string(context) + ": " +
+                             result.error().what());
     }
     return result.value();
   }
 
-  std::string to_string_or_throw(const Json &json, std::string_view context)
+  ExpectedString to_string(const Json &json, std::string_view context)
   {
     auto result = json.to_string();
     if (!result)
     {
-      throw std::runtime_error("Expected JSON string for " + std::string(context) +
-                               ": " + result.error().what());
+      return std::unexpected("Expected JSON string for " +
+                             std::string(context) + ": " +
+                             result.error().what());
     }
     return result.value();
   }
 
-  void rewrite_schema_refs(Json *node)
+  ExpectedVoid rewrite_schema_refs(Json *node)
   {
     if (const auto object_result = node->to_object(); object_result)
     {
@@ -136,20 +145,28 @@ namespace
 
       if (object.count("$ref") != 0U)
       {
-        auto ref = to_string_or_throw(object.at("$ref"), "$ref");
-        if (ref.starts_with("#/$defs/"))
+        auto ref = to_string(object.at("$ref"), "$ref");
+        if (!ref)
         {
-          object["$ref"] = "#/components/schemas/" + ref.substr(8);
+          return std::unexpected(ref.error());
+        }
+        if (ref->starts_with("#/$defs/"))
+        {
+          object["$ref"] = "#/components/schemas/" + ref->substr(8);
         }
       }
 
       for (auto &[_, value] : object)
       {
-        rewrite_schema_refs(&value);
+        auto rewritten = rewrite_schema_refs(&value);
+        if (!rewritten)
+        {
+          return rewritten;
+        }
       }
 
       *node = std::move(object);
-      return;
+      return {};
     }
 
     if (const auto array_result = node->to_array(); array_result)
@@ -157,26 +174,50 @@ namespace
       auto array = array_result.value();
       for (auto &value : array)
       {
-        rewrite_schema_refs(&value);
+        auto rewritten = rewrite_schema_refs(&value);
+        if (!rewritten)
+        {
+          return rewritten;
+        }
       }
       *node = std::move(array);
     }
+
+    return {};
   }
 
   template <class T>
-  void register_schema(JsonObject *schemas)
+  ExpectedVoid register_schema(JsonObject *schemas)
   {
-    auto schema_document =
-        to_object_or_throw(parse_json_or_throw(rfl::json::to_schema<T>()),
-                           "reflect-cpp JSON schema");
-
-    auto definitions = to_object_or_throw(schema_document.at("$defs"), "$defs");
-
-    for (auto &[name, schema] : definitions)
+    auto schema_json = parse_json(rfl::json::to_schema<T>());
+    if (!schema_json)
     {
-      rewrite_schema_refs(&schema);
+      return std::unexpected(schema_json.error());
+    }
+
+    auto schema_document = to_object(*schema_json, "reflect-cpp JSON schema");
+    if (!schema_document)
+    {
+      return std::unexpected(schema_document.error());
+    }
+
+    auto definitions = to_object(schema_document->at("$defs"), "$defs");
+    if (!definitions)
+    {
+      return std::unexpected(definitions.error());
+    }
+
+    for (auto &[name, schema] : *definitions)
+    {
+      auto rewritten = rewrite_schema_refs(&schema);
+      if (!rewritten)
+      {
+        return rewritten;
+      }
       (*schemas)[name] = std::move(schema);
     }
+
+    return {};
   }
 
   Json schema_ref(const std::string &name)
@@ -200,14 +241,20 @@ namespace
     return json_response(description, "ErrorResponse");
   }
 
-  Json build_openapi_spec()
+  ExpectedJson build_openapi_spec()
   {
     JsonObject schemas;
-    register_schema<Pet>(&schemas);
-    register_schema<PetSummary>(&schemas);
-    register_schema<CreatePetRequest>(&schemas);
-    register_schema<PetListResponse>(&schemas);
-    register_schema<ErrorResponse>(&schemas);
+    for (const auto result : {register_schema<Pet>(&schemas),
+                              register_schema<PetSummary>(&schemas),
+                              register_schema<CreatePetRequest>(&schemas),
+                              register_schema<PetListResponse>(&schemas),
+                              register_schema<ErrorResponse>(&schemas)})
+    {
+      if (!result)
+      {
+        return std::unexpected(result.error());
+      }
+    }
 
     return make_object({
         {"openapi", "3.1.0"},
@@ -287,21 +334,34 @@ namespace
     });
   }
 
-  bool contains_schema_ref(const Json &node, const std::string &target_ref)
+  ExpectedBool contains_schema_ref(const Json &node,
+                                   const std::string &target_ref)
   {
     if (const auto object_result = node.to_object(); object_result)
     {
       const auto object = object_result.value();
 
-      if (object.count("$ref") != 0U &&
-          to_string_or_throw(object.at("$ref"), "$ref") == target_ref)
+      if (object.count("$ref") != 0U)
       {
-        return true;
+        auto ref = to_string(object.at("$ref"), "$ref");
+        if (!ref)
+        {
+          return std::unexpected(ref.error());
+        }
+        if (*ref == target_ref)
+        {
+          return true;
+        }
       }
 
       for (const auto &[_, value] : object)
       {
-        if (contains_schema_ref(value, target_ref))
+        auto contains = contains_schema_ref(value, target_ref);
+        if (!contains)
+        {
+          return std::unexpected(contains.error());
+        }
+        if (*contains)
         {
           return true;
         }
@@ -313,7 +373,12 @@ namespace
       const auto array = array_result.value();
       for (const auto &value : array)
       {
-        if (contains_schema_ref(value, target_ref))
+        auto contains = contains_schema_ref(value, target_ref);
+        if (!contains)
+        {
+          return std::unexpected(contains.error());
+        }
+        if (*contains)
         {
           return true;
         }
@@ -326,74 +391,128 @@ namespace
   int run_checks()
   {
     std::vector<std::string> errors;
-
-    try
+    const auto spec = build_openapi_spec();
+    if (!spec)
     {
-      const auto spec = build_openapi_spec();
-      const auto document = to_object_or_throw(spec, "OpenAPI document");
-
-      if (to_string_or_throw(document.at("openapi"), "openapi") != "3.1.0")
-      {
-        errors.emplace_back("Expected OpenAPI version 3.1.0.");
-      }
-
-      const auto components =
-          to_object_or_throw(document.at("components"), "components");
-      const auto schemas = to_object_or_throw(components.at("schemas"), "schemas");
-
-      for (const auto *name :
-           {"Pet", "PetSummary", "CreatePetRequest", "PetListResponse",
-            "ErrorResponse"})
-      {
-        if (schemas.count(name) == 0U)
-        {
-          errors.emplace_back("Missing component schema: " + std::string(name));
-        }
-      }
-
-      const auto paths = to_object_or_throw(document.at("paths"), "paths");
-      if (paths.count("/pets") == 0U)
-      {
-        errors.emplace_back("Missing /pets path.");
-      }
-      if (paths.count("/pets/{petId}") == 0U)
-      {
-        errors.emplace_back("Missing /pets/{petId} path.");
-      }
-
-      for (const auto *ref :
-           {"#/components/schemas/CreatePetRequest",
-            "#/components/schemas/Pet",
-            "#/components/schemas/ErrorResponse",
-            "#/components/schemas/PetListResponse"})
-      {
-        if (!contains_schema_ref(spec, ref))
-        {
-          errors.emplace_back("Missing schema reference: " + std::string(ref));
-        }
-      }
-
-      const auto pet_schema = to_object_or_throw(schemas.at("Pet"), "Pet schema");
-      const auto pet_properties =
-          to_object_or_throw(pet_schema.at("properties"), "Pet.properties");
-      const auto contactEmail =
-          to_object_or_throw(pet_properties.at("contactEmail"),
-                             "Pet.properties.contactEmail");
-
-      if (contactEmail.count("description") == 0U)
-      {
-        errors.emplace_back(
-            "Expected reflect-cpp field descriptions in the Pet schema.");
-      }
-      if (contactEmail.count("pattern") == 0U)
-      {
-        errors.emplace_back(
-            "Expected reflect-cpp email validation metadata in the Pet schema.");
-      }
+      errors.emplace_back(spec.error());
     }
-    catch (const std::exception &exception)
+    else
     {
-      errors.emplace_back(exception.what());
+      const auto document = to_object(*spec, "OpenAPI document");
+      if (!document)
+      {
+        errors.emplace_back(document.error());
+      }
+      else
+      {
+        const auto openapi = to_string(document->at("openapi"), "openapi");
+        if (!openapi)
+        {
+          errors.emplace_back(openapi.error());
+        }
+        else if (*openapi != "3.1.0")
+        {
+          errors.emplace_back("Expected OpenAPI version 3.1.0.");
+        }
+
+        const auto components = to_object(document->at("components"), "components");
+        if (!components)
+        {
+          errors.emplace_back(components.error());
+        }
+        else
+        {
+          const auto schemas = to_object(components->at("schemas"), "schemas");
+          if (!schemas)
+          {
+            errors.emplace_back(schemas.error());
+          }
+          else
+          {
+            for (const auto *name :
+                 {"Pet", "PetSummary", "CreatePetRequest", "PetListResponse",
+                  "ErrorResponse"})
+            {
+              if (schemas->count(name) == 0U)
+              {
+                errors.emplace_back("Missing component schema: " + std::string(name));
+              }
+            }
+
+            const auto petSchema = to_object(schemas->at("Pet"), "Pet schema");
+            if (!petSchema)
+            {
+              errors.emplace_back(petSchema.error());
+            }
+            else
+            {
+              const auto petProperties =
+                  to_object(petSchema->at("properties"), "Pet.properties");
+              if (!petProperties)
+              {
+                errors.emplace_back(petProperties.error());
+              }
+              else
+              {
+                const auto contactEmail =
+                    to_object(petProperties->at("contactEmail"),
+                              "Pet.properties.contactEmail");
+                if (!contactEmail)
+                {
+                  errors.emplace_back(contactEmail.error());
+                }
+                else
+                {
+                  if (contactEmail->count("description") == 0U)
+                  {
+                    errors.emplace_back(
+                        "Expected reflect-cpp field descriptions in the Pet schema.");
+                  }
+                  if (contactEmail->count("pattern") == 0U)
+                  {
+                    errors.emplace_back(
+                        "Expected reflect-cpp email validation metadata in the Pet schema.");
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        const auto paths = to_object(document->at("paths"), "paths");
+        if (!paths)
+        {
+          errors.emplace_back(paths.error());
+        }
+        else
+        {
+          if (paths->count("/pets") == 0U)
+          {
+            errors.emplace_back("Missing /pets path.");
+          }
+          if (paths->count("/pets/{petId}") == 0U)
+          {
+            errors.emplace_back("Missing /pets/{petId} path.");
+          }
+        }
+
+        for (const auto *ref :
+             {"#/components/schemas/CreatePetRequest",
+              "#/components/schemas/Pet",
+              "#/components/schemas/ErrorResponse",
+              "#/components/schemas/PetListResponse"})
+        {
+          auto contains = contains_schema_ref(*spec, ref);
+          if (!contains)
+          {
+            errors.emplace_back(contains.error());
+          }
+          else if (!*contains)
+          {
+            errors.emplace_back("Missing schema reference: " + std::string(ref));
+          }
+        }
+      }
     }
 
     if (!errors.empty())
@@ -437,7 +556,14 @@ int main(int argc, char **argv)
 
   std::cout << "Building open API spec..." << std::endl;
 
-  rfl::json::write(build_openapi_spec(), std::cout, rfl::json::pretty);
+  const auto spec = build_openapi_spec();
+  if (!spec)
+  {
+    std::cerr << "failed to build OpenAPI spec: " << spec.error() << '\n';
+    return 1;
+  }
+
+  rfl::json::write(*spec, std::cout, rfl::json::pretty);
   std::cout << '\n';
   return 0;
 }
