@@ -137,7 +137,7 @@ namespace
 
   ExpectedJson parseJson(const std::string &json)
   {
-    auto result = rfl::json::read<Json>(json);
+    const auto result = rfl::json::read<Json>(json);
     if (!result)
     {
       return std::unexpected("Failed to parse JSON: " + result.error().what());
@@ -147,7 +147,7 @@ namespace
 
   ExpectedJsonObject toObject(const Json &json, std::string_view context)
   {
-    auto result = json.to_object();
+    const auto result = json.to_object();
     if (!result)
     {
       return std::unexpected("Expected JSON object for " + std::string(context) +
@@ -158,7 +158,7 @@ namespace
 
   ExpectedString toString(const Json &json, std::string_view context)
   {
-    auto result = json.to_string();
+    const auto result = json.to_string();
     if (!result)
     {
       return std::unexpected("Expected JSON string for " + std::string(context) +
@@ -175,7 +175,7 @@ namespace
 
       if (object.count("$ref") != 0U)
       {
-        auto ref = toString(object.at("$ref"), "$ref");
+        const auto ref = toString(object.at("$ref"), "$ref");
         if (!ref)
         {
           return std::unexpected(ref.error());
@@ -188,7 +188,7 @@ namespace
 
       for (auto &[_, value] : object)
       {
-        auto rewritten = rewriteSchemaRefs(&value);
+        const auto rewritten = rewriteSchemaRefs(&value);
         if (!rewritten)
         {
           return rewritten;
@@ -204,7 +204,7 @@ namespace
       auto array = arrayResult.value();
       for (auto &value : array)
       {
-        auto rewritten = rewriteSchemaRefs(&value);
+        const auto rewritten = rewriteSchemaRefs(&value);
         if (!rewritten)
         {
           return rewritten;
@@ -219,13 +219,13 @@ namespace
   template <class T>
   ExpectedVoid registerSchema(JsonObject *schemas)
   {
-    auto schemaJson = parseJson(rfl::json::to_schema<T>());
+    const auto schemaJson = parseJson(rfl::json::to_schema<T>());
     if (!schemaJson)
     {
       return std::unexpected(schemaJson.error());
     }
 
-    auto schemaDocument = toObject(*schemaJson, "reflect-cpp JSON schema");
+    const auto schemaDocument = toObject(*schemaJson, "reflect-cpp JSON schema");
     if (!schemaDocument)
     {
       return std::unexpected(schemaDocument.error());
@@ -239,7 +239,7 @@ namespace
 
     for (auto &[name, schema] : *definitions)
     {
-      auto rewritten = rewriteSchemaRefs(&schema);
+      const auto rewritten = rewriteSchemaRefs(&schema);
       if (!rewritten)
       {
         return rewritten;
@@ -424,7 +424,7 @@ namespace
 
       if (object.count("$ref") != 0U)
       {
-        auto ref = toString(object.at("$ref"), "$ref");
+      const auto ref = toString(object.at("$ref"), "$ref");
         if (!ref)
         {
           return std::unexpected(ref.error());
@@ -437,7 +437,7 @@ namespace
 
       for (const auto &[_, value] : object)
       {
-        auto contains = containsSchemaRef(value, targetRef);
+      const auto contains = containsSchemaRef(value, targetRef);
         if (!contains)
         {
           return std::unexpected(contains.error());
@@ -454,7 +454,7 @@ namespace
       const auto array = arrayResult.value();
       for (const auto &value : array)
       {
-        auto contains = containsSchemaRef(value, targetRef);
+      const auto contains = containsSchemaRef(value, targetRef);
         if (!contains)
         {
           return std::unexpected(contains.error());
@@ -471,7 +471,7 @@ namespace
 
   ExpectedBool arrayContainsString(const Json &json, std::string_view expectedValue)
   {
-    auto array = json.to_array();
+    const auto array = json.to_array();
     if (!array)
     {
       return std::unexpected("Expected JSON array while checking enum values: " +
@@ -480,7 +480,7 @@ namespace
 
     for (const auto &value : array.value())
     {
-      auto stringValue = toString(value, "array value");
+      const auto stringValue = toString(value, "array value");
       if (!stringValue)
       {
         return std::unexpected(stringValue.error());
@@ -638,7 +638,8 @@ namespace
               {
                 for (const auto *status : {"sassy", "sleepy", "zoomy", "cute"})
                 {
-                  auto contains = arrayContainsString(statusSchema->at("enum"), status);
+                  const auto contains =
+                      arrayContainsString(statusSchema->at("enum"), status);
                   if (!contains)
                   {
                     errors.emplace_back(contains.error());
@@ -677,7 +678,7 @@ namespace
                                 "#/components/schemas/CatLogEntry",
                                 "#/components/schemas/CatLogListResponse"})
         {
-          auto contains = containsSchemaRef(*spec, ref);
+          const auto contains = containsSchemaRef(*spec, ref);
           if (!contains)
           {
             errors.emplace_back(contains.error());
