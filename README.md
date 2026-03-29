@@ -22,23 +22,34 @@ out/build/clang-release/src/reflect_cpp_test
 ## OpenAPI Demo
 
 The application now demonstrates how to turn C++ DTOs into an OpenAPI 3.1
-document for a webserver-style API.
+document for a CatLog webserver-style API.
 
-This demo uses `rfl::json::to_schema<T>()` to generate JSON Schema for each C++ type, rewrites those schema references from `#/$defs/...` to `#/components/schemas/...`, and assembles a minimal OpenAPI 3.1 document around them.
+This demo uses `rfl::json::to_schema<T>()` to generate JSON Schema for each C++
+type, rewrites those schema references from `#/$defs/...` to
+`#/components/schemas/...`, and assembles a minimal OpenAPI 3.1 document around
+them.
 
 The generated spec includes:
 
-- `GET /pets`
-- `GET /pets/{petId}`
-- `POST /pets`
+- `GET /cats`
+- `POST /cats`
+- `GET /cats/{catId}`
+- `GET /cats/{catId}/logs`
+- `POST /cats/{catId}/logs`
 
 The component schemas are generated from C++ types such as:
 
-- `Pet`
-- `PetSummary`
-- `CreatePetRequest`
-- `PetListResponse`
+- `Cat`
+- `CatSummary`
+- `CreateCatRequest`
+- `CatLogEntry`
+- `CreateCatLogEntryRequest`
+- `CatListResponse`
+- `CatLogListResponse`
 - `ErrorResponse`
+
+Cat data now models `dateOfBirth` instead of `ageYears`, and status log entries
+track cat moods like `sassy`, `sleepy`, `zoomy`, and `cute`.
 
 This is intended as a contract-generation example for a future C++ webserver.
 The routes themselves are declared explicitly in C++, while the request and

@@ -1,67 +1,101 @@
+#include <expected>
 #include <iostream>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <expected>
 
 #include <rfl.hpp>
 #include <rfl/json.hpp>
 
-using AgeYears = rfl::Validator<int, rfl::Minimum<0>, rfl::Maximum<30>>;
+using DateString = rfl::Pattern<R"(^\d{4}-\d{2}-\d{2}$)", "Date">;
+using DateTimeString =
+    rfl::Pattern<R"(^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$)", "DateTime">;
 using NonEmptyString = rfl::Validator<std::string, rfl::Size<rfl::Minimum<1>>>;
 
-enum class PetStatus
+enum class CatStatus
 {
-  available,
-  adopted,
-  fostered
+  sassy,
+  sleepy,
+  zoomy,
+  cute
 };
 
-struct PetSummary
+struct CatSummary
 {
-  rfl::Description<"Unique pet identifier used in URLs.", std::string> petId;
-  rfl::Description<"Display name shown in pet listings.", NonEmptyString> name;
-  rfl::Description<"Current lifecycle state for the pet.", PetStatus> status;
+  rfl::Description<"Unique cat identifier used in URLs.", std::string> catId;
+  rfl::Description<"Display name shown in cat listings.", NonEmptyString> name;
+  rfl::Description<"Most recently logged status for this cat.", CatStatus>
+      latestStatus;
 };
 
-struct Pet
+struct Cat
 {
-  rfl::Description<"Unique pet identifier used in URLs.", std::string> petId;
+  rfl::Description<"Unique cat identifier used in URLs.", std::string> catId;
   rfl::Description<"Display name presented to API clients.", NonEmptyString>
       name;
-  rfl::Description<"Optional short tag used by clients for filtering.",
+  rfl::Description<"Optional breed information for the cat.",
                    std::optional<std::string>>
-      tag;
-  rfl::Description<"Approximate age in whole years.", AgeYears> ageYears;
-  rfl::Description<"Primary adoption contact email.", rfl::Email> contactEmail;
-  rfl::Description<"Vaccinations already recorded for the pet.",
-                   std::vector<NonEmptyString>>
-      vaccinations;
-  rfl::Description<"Current lifecycle state for the pet.", PetStatus> status;
+      breed;
+  rfl::Description<"Date of birth in YYYY-MM-DD format.", DateString>
+      dateOfBirth;
+  rfl::Description<"Optional notes about the cat.",
+                   std::optional<NonEmptyString>>
+      notes;
 };
 
-struct CreatePetRequest
+struct CreateCatRequest
 {
   rfl::Description<"Display name presented to API clients.", NonEmptyString>
       name;
-  rfl::Description<"Optional short tag used by clients for filtering.",
+  rfl::Description<"Optional breed information for the cat.",
                    std::optional<std::string>>
-      tag;
-  rfl::Description<"Approximate age in whole years.", AgeYears> ageYears;
-  rfl::Description<"Primary adoption contact email.", rfl::Email> contactEmail;
-  rfl::Description<"Vaccinations already recorded for the pet.",
-                   std::vector<NonEmptyString>>
-      vaccinations;
-  rfl::Description<"Status assigned when the pet is created.", PetStatus>
-      status;
+      breed;
+  rfl::Description<"Date of birth in YYYY-MM-DD format.", DateString>
+      dateOfBirth;
+  rfl::Description<"Optional notes about the cat.",
+                   std::optional<NonEmptyString>>
+      notes;
 };
 
-struct PetListResponse
+struct CatLogEntry
 {
-  rfl::Description<"Pets available from the collection endpoint.",
-                   std::vector<PetSummary>>
-      pets;
+  rfl::Description<"Unique log identifier for this status entry.", std::string>
+      logId;
+  rfl::Description<"Identifier of the cat this status belongs to.", std::string>
+      catId;
+  rfl::Description<"Cat mood/status captured by the entry.", CatStatus> status;
+  rfl::Description<"Timestamp recorded in UTC as YYYY-MM-DDTHH:MM:SSZ.",
+                   DateTimeString>
+      loggedAt;
+  rfl::Description<"Optional note recorded alongside the status.",
+                   std::optional<NonEmptyString>>
+      note;
+};
+
+struct CreateCatLogEntryRequest
+{
+  rfl::Description<"Cat mood/status captured by the entry.", CatStatus> status;
+  rfl::Description<"Timestamp recorded in UTC as YYYY-MM-DDTHH:MM:SSZ.",
+                   DateTimeString>
+      loggedAt;
+  rfl::Description<"Optional note recorded alongside the status.",
+                   std::optional<NonEmptyString>>
+      note;
+};
+
+struct CatListResponse
+{
+  rfl::Description<"Cats available from the collection endpoint.",
+                   std::vector<CatSummary>>
+      cats;
+};
+
+struct CatLogListResponse
+{
+  rfl::Description<"Status log entries recorded for a cat.",
+                   std::vector<CatLogEntry>>
+      logs;
 };
 
 struct ErrorResponse
@@ -80,8 +114,13 @@ namespace
   using Json = rfl::Generic;
   using JsonArray = Json::Array;
   using JsonObject = Json::Object;
+  using ExpectedJson = std::expected<Json, std::string>;
+  using ExpectedJsonObject = std::expected<JsonObject, std::string>;
+  using ExpectedString = std::expected<std::string, std::string>;
+  using ExpectedVoid = std::expected<void, std::string>;
+  using ExpectedBool = std::expected<bool, std::string>;
 
-  Json make_object(std::initializer_list<std::pair<std::string, Json>> fields)
+  Json makeObject(std::initializer_list<std::pair<std::string, Json>> fields)
   {
     JsonObject object;
     for (const auto &[key, value] : fields)
@@ -91,61 +130,52 @@ namespace
     return object;
   }
 
-  Json make_array(std::initializer_list<Json> values)
+  Json makeArray(std::initializer_list<Json> values)
   {
     return JsonArray(values);
   }
 
-  using ExpectedJson = std::expected<Json, std::string>;
-  using ExpectedJsonObject = std::expected<JsonObject, std::string>;
-  using ExpectedString = std::expected<std::string, std::string>;
-  using ExpectedVoid = std::expected<void, std::string>;
-  using ExpectedBool = std::expected<bool, std::string>;
-
-  ExpectedJson parse_json(const std::string &json)
+  ExpectedJson parseJson(const std::string &json)
   {
     auto result = rfl::json::read<Json>(json);
     if (!result)
     {
-      return std::unexpected("Failed to parse JSON: " +
-                             result.error().what());
+      return std::unexpected("Failed to parse JSON: " + result.error().what());
     }
     return result.value();
   }
 
-  ExpectedJsonObject to_object(const Json &json, std::string_view context)
+  ExpectedJsonObject toObject(const Json &json, std::string_view context)
   {
     auto result = json.to_object();
     if (!result)
     {
-      return std::unexpected("Expected JSON object for " +
-                             std::string(context) + ": " +
-                             result.error().what());
+      return std::unexpected("Expected JSON object for " + std::string(context) +
+                             ": " + result.error().what());
     }
     return result.value();
   }
 
-  ExpectedString to_string(const Json &json, std::string_view context)
+  ExpectedString toString(const Json &json, std::string_view context)
   {
     auto result = json.to_string();
     if (!result)
     {
-      return std::unexpected("Expected JSON string for " +
-                             std::string(context) + ": " +
-                             result.error().what());
+      return std::unexpected("Expected JSON string for " + std::string(context) +
+                             ": " + result.error().what());
     }
     return result.value();
   }
 
-  ExpectedVoid rewrite_schema_refs(Json *node)
+  ExpectedVoid rewriteSchemaRefs(Json *node)
   {
-    if (const auto object_result = node->to_object(); object_result)
+    if (const auto objectResult = node->to_object(); objectResult)
     {
-      auto object = object_result.value();
+      auto object = objectResult.value();
 
       if (object.count("$ref") != 0U)
       {
-        auto ref = to_string(object.at("$ref"), "$ref");
+        auto ref = toString(object.at("$ref"), "$ref");
         if (!ref)
         {
           return std::unexpected(ref.error());
@@ -158,7 +188,7 @@ namespace
 
       for (auto &[_, value] : object)
       {
-        auto rewritten = rewrite_schema_refs(&value);
+        auto rewritten = rewriteSchemaRefs(&value);
         if (!rewritten)
         {
           return rewritten;
@@ -169,12 +199,12 @@ namespace
       return {};
     }
 
-    if (const auto array_result = node->to_array(); array_result)
+    if (const auto arrayResult = node->to_array(); arrayResult)
     {
-      auto array = array_result.value();
+      auto array = arrayResult.value();
       for (auto &value : array)
       {
-        auto rewritten = rewrite_schema_refs(&value);
+        auto rewritten = rewriteSchemaRefs(&value);
         if (!rewritten)
         {
           return rewritten;
@@ -187,21 +217,21 @@ namespace
   }
 
   template <class T>
-  ExpectedVoid register_schema(JsonObject *schemas)
+  ExpectedVoid registerSchema(JsonObject *schemas)
   {
-    auto schema_json = parse_json(rfl::json::to_schema<T>());
-    if (!schema_json)
+    auto schemaJson = parseJson(rfl::json::to_schema<T>());
+    if (!schemaJson)
     {
-      return std::unexpected(schema_json.error());
+      return std::unexpected(schemaJson.error());
     }
 
-    auto schema_document = to_object(*schema_json, "reflect-cpp JSON schema");
-    if (!schema_document)
+    auto schemaDocument = toObject(*schemaJson, "reflect-cpp JSON schema");
+    if (!schemaDocument)
     {
-      return std::unexpected(schema_document.error());
+      return std::unexpected(schemaDocument.error());
     }
 
-    auto definitions = to_object(schema_document->at("$defs"), "$defs");
+    auto definitions = toObject(schemaDocument->at("$defs"), "$defs");
     if (!definitions)
     {
       return std::unexpected(definitions.error());
@@ -209,7 +239,7 @@ namespace
 
     for (auto &[name, schema] : *definitions)
     {
-      auto rewritten = rewrite_schema_refs(&schema);
+      auto rewritten = rewriteSchemaRefs(&schema);
       if (!rewritten)
       {
         return rewritten;
@@ -220,35 +250,36 @@ namespace
     return {};
   }
 
-  Json schema_ref(const std::string &name)
+  Json schemaRef(const std::string &name)
   {
-    return make_object(
-        {{"$ref", "#/components/schemas/" + name}});
+    return makeObject({{"$ref", "#/components/schemas/" + name}});
   }
 
-  Json json_response(const std::string &description,
-                     const std::string &schema_name)
+  Json jsonResponse(const std::string &description, const std::string &schemaName)
   {
-    return make_object(
+    return makeObject(
         {{"description", description},
          {"content",
-          make_object({{"application/json",
-                        make_object({{"schema", schema_ref(schema_name)}})}})}});
+          makeObject({{"application/json",
+                       makeObject({{"schema", schemaRef(schemaName)}})}})}});
   }
 
-  Json error_response(const std::string &description)
+  Json errorResponse(const std::string &description)
   {
-    return json_response(description, "ErrorResponse");
+    return jsonResponse(description, "ErrorResponse");
   }
 
-  ExpectedJson build_openapi_spec()
+  ExpectedJson buildOpenApiSpec()
   {
     JsonObject schemas;
-    for (const auto result : {register_schema<Pet>(&schemas),
-                              register_schema<PetSummary>(&schemas),
-                              register_schema<CreatePetRequest>(&schemas),
-                              register_schema<PetListResponse>(&schemas),
-                              register_schema<ErrorResponse>(&schemas)})
+    for (const auto result : {registerSchema<Cat>(&schemas),
+                              registerSchema<CatSummary>(&schemas),
+                              registerSchema<CreateCatRequest>(&schemas),
+                              registerSchema<CatLogEntry>(&schemas),
+                              registerSchema<CreateCatLogEntryRequest>(&schemas),
+                              registerSchema<CatListResponse>(&schemas),
+                              registerSchema<CatLogListResponse>(&schemas),
+                              registerSchema<ErrorResponse>(&schemas)})
     {
       if (!result)
       {
@@ -256,99 +287,149 @@ namespace
       }
     }
 
-    return make_object({
+    return makeObject({
         {"openapi", "3.1.0"},
         {"info",
-         make_object({
-             {"title", "reflect-cpp Pets API"},
+         makeObject({
+             {"title", "reflect-cpp CatLog API"},
              {"version", "1.0.0"},
              {"description",
               "OpenAPI 3.1 document assembled from reflect-cpp-generated JSON "
-              "Schema components."},
+              "Schema components for a CatLog API."},
          })},
         {"servers",
-         make_array({make_object({
+         makeArray({makeObject({
              {"url", "http://localhost:8080"},
              {"description", "Local development server"},
          })})},
         {"paths",
-         make_object({
-             {"/pets",
-              make_object({
+         makeObject({
+             {"/cats",
+              makeObject({
                   {"get",
-                   make_object({
-                       {"summary", "List pets"},
-                       {"operationId", "listPets"},
+                   makeObject({
+                       {"summary", "List cats"},
+                       {"operationId", "listCats"},
                        {"responses",
-                        make_object({
-                            {"200",
-                             json_response("A pageless list of pets.",
-                                           "PetListResponse")},
-                            {"500", error_response("Unexpected server error.")},
+                        makeObject({
+                            {"200", jsonResponse("A list of cats.", "CatListResponse")},
+                            {"500", errorResponse("Unexpected server error.")},
                         })},
                    })},
                   {"post",
-                   make_object({
-                       {"summary", "Create a pet"},
-                       {"operationId", "createPet"},
+                   makeObject({
+                       {"summary", "Create a cat"},
+                       {"operationId", "createCat"},
                        {"requestBody",
-                        make_object({
+                        makeObject({
                             {"required", true},
                             {"content",
-                             make_object({{"application/json",
-                                           make_object(
-                                               {{"schema",
-                                                 schema_ref("CreatePetRequest")}})}})},
+                             makeObject({{"application/json",
+                                          makeObject({{"schema",
+                                                       schemaRef("CreateCatRequest")}})}})},
                         })},
                        {"responses",
-                        make_object({
-                            {"201", json_response("The created pet.", "Pet")},
-                            {"400", error_response("The request body was invalid.")},
+                        makeObject({
+                            {"201", jsonResponse("The created cat.", "Cat")},
+                            {"400", errorResponse("The request body was invalid.")},
                         })},
                    })},
               })},
-             {"/pets/{petId}",
-              make_object({
+             {"/cats/{catId}",
+              makeObject({
                   {"get",
-                   make_object({
-                       {"summary", "Get a pet by id"},
-                       {"operationId", "getPetById"},
+                   makeObject({
+                       {"summary", "Get a cat by id"},
+                       {"operationId", "getCatById"},
                        {"parameters",
-                        make_array({make_object({
-                            {"name", "petId"},
+                        makeArray({makeObject({
+                            {"name", "catId"},
                             {"in", "path"},
                             {"required", true},
                             {"description",
-                             "Unique identifier for a previously created pet."},
-                            {"schema", make_object({{"type", "string"}})},
+                             "Unique identifier for a previously created cat."},
+                            {"schema", makeObject({{"type", "string"}})},
                         })})},
                        {"responses",
-                        make_object({
-                            {"200", json_response("The requested pet.", "Pet")},
-                            {"404", error_response("The pet was not found.")},
+                        makeObject({
+                            {"200", jsonResponse("The requested cat.", "Cat")},
+                            {"404", errorResponse("The cat was not found.")},
+                        })},
+                   })},
+              })},
+             {"/cats/{catId}/logs",
+              makeObject({
+                  {"get",
+                   makeObject({
+                       {"summary", "List cat status logs"},
+                       {"operationId", "listCatLogs"},
+                       {"parameters",
+                        makeArray({makeObject({
+                            {"name", "catId"},
+                            {"in", "path"},
+                            {"required", true},
+                            {"description",
+                             "Unique identifier for the cat whose logs are being requested."},
+                            {"schema", makeObject({{"type", "string"}})},
+                        })})},
+                       {"responses",
+                        makeObject({
+                            {"200",
+                             jsonResponse("Status log entries for the cat.",
+                                          "CatLogListResponse")},
+                            {"404", errorResponse("The cat was not found.")},
+                        })},
+                   })},
+                  {"post",
+                   makeObject({
+                       {"summary", "Create a cat status log entry"},
+                       {"operationId", "createCatLogEntry"},
+                       {"parameters",
+                        makeArray({makeObject({
+                            {"name", "catId"},
+                            {"in", "path"},
+                            {"required", true},
+                            {"description",
+                             "Unique identifier for the cat receiving the new log entry."},
+                            {"schema", makeObject({{"type", "string"}})},
+                        })})},
+                       {"requestBody",
+                        makeObject({
+                            {"required", true},
+                            {"content",
+                             makeObject({{"application/json",
+                                          makeObject(
+                                              {{"schema",
+                                                schemaRef("CreateCatLogEntryRequest")}})}})},
+                        })},
+                       {"responses",
+                        makeObject({
+                            {"201",
+                             jsonResponse("The created log entry.", "CatLogEntry")},
+                            {"400", errorResponse("The request body was invalid.")},
+                            {"404", errorResponse("The cat was not found.")},
                         })},
                    })},
               })},
          })},
-        {"components", make_object({{"schemas", std::move(schemas)}})},
+        {"components", makeObject({{"schemas", std::move(schemas)}})},
     });
   }
 
-  ExpectedBool contains_schema_ref(const Json &node,
-                                   const std::string &target_ref)
+  ExpectedBool containsSchemaRef(const Json &node, const std::string &targetRef)
   {
-    if (const auto object_result = node.to_object(); object_result)
+    if (const auto objectResult = node.to_object(); objectResult)
     {
-      const auto object = object_result.value();
+      const auto object = objectResult.value();
 
       if (object.count("$ref") != 0U)
       {
-        auto ref = to_string(object.at("$ref"), "$ref");
+        auto ref = toString(object.at("$ref"), "$ref");
         if (!ref)
         {
           return std::unexpected(ref.error());
         }
-        if (*ref == target_ref)
+        if (*ref == targetRef)
         {
           return true;
         }
@@ -356,7 +437,7 @@ namespace
 
       for (const auto &[_, value] : object)
       {
-        auto contains = contains_schema_ref(value, target_ref);
+        auto contains = containsSchemaRef(value, targetRef);
         if (!contains)
         {
           return std::unexpected(contains.error());
@@ -368,12 +449,12 @@ namespace
       }
     }
 
-    if (const auto array_result = node.to_array(); array_result)
+    if (const auto arrayResult = node.to_array(); arrayResult)
     {
-      const auto array = array_result.value();
+      const auto array = arrayResult.value();
       for (const auto &value : array)
       {
-        auto contains = contains_schema_ref(value, target_ref);
+        auto contains = containsSchemaRef(value, targetRef);
         if (!contains)
         {
           return std::unexpected(contains.error());
@@ -388,24 +469,49 @@ namespace
     return false;
   }
 
-  int run_checks()
+  ExpectedBool arrayContainsString(const Json &json, std::string_view expectedValue)
+  {
+    auto array = json.to_array();
+    if (!array)
+    {
+      return std::unexpected("Expected JSON array while checking enum values: " +
+                             array.error().what());
+    }
+
+    for (const auto &value : array.value())
+    {
+      auto stringValue = toString(value, "array value");
+      if (!stringValue)
+      {
+        return std::unexpected(stringValue.error());
+      }
+      if (*stringValue == expectedValue)
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  int runChecks()
   {
     std::vector<std::string> errors;
-    const auto spec = build_openapi_spec();
+    const auto spec = buildOpenApiSpec();
     if (!spec)
     {
       errors.emplace_back(spec.error());
     }
     else
     {
-      const auto document = to_object(*spec, "OpenAPI document");
+      const auto document = toObject(*spec, "OpenAPI document");
       if (!document)
       {
         errors.emplace_back(document.error());
       }
       else
       {
-        const auto openapi = to_string(document->at("openapi"), "openapi");
+        const auto openapi = toString(document->at("openapi"), "openapi");
         if (!openapi)
         {
           errors.emplace_back(openapi.error());
@@ -415,23 +521,28 @@ namespace
           errors.emplace_back("Expected OpenAPI version 3.1.0.");
         }
 
-        const auto components = to_object(document->at("components"), "components");
+        const auto components = toObject(document->at("components"), "components");
         if (!components)
         {
           errors.emplace_back(components.error());
         }
         else
         {
-          const auto schemas = to_object(components->at("schemas"), "schemas");
+          const auto schemas = toObject(components->at("schemas"), "schemas");
           if (!schemas)
           {
             errors.emplace_back(schemas.error());
           }
           else
           {
-            for (const auto *name :
-                 {"Pet", "PetSummary", "CreatePetRequest", "PetListResponse",
-                  "ErrorResponse"})
+            for (const auto *name : {"Cat",
+                                     "CatSummary",
+                                     "CreateCatRequest",
+                                     "CatLogEntry",
+                                     "CreateCatLogEntryRequest",
+                                     "CatListResponse",
+                                     "CatLogListResponse",
+                                     "ErrorResponse"})
             {
               if (schemas->count(name) == 0U)
               {
@@ -439,39 +550,103 @@ namespace
               }
             }
 
-            const auto petSchema = to_object(schemas->at("Pet"), "Pet schema");
-            if (!petSchema)
+            if (schemas->count("Cat") != 0U)
             {
-              errors.emplace_back(petSchema.error());
-            }
-            else
-            {
-              const auto petProperties =
-                  to_object(petSchema->at("properties"), "Pet.properties");
-              if (!petProperties)
+              const auto catSchema = toObject(schemas->at("Cat"), "Cat schema");
+              if (!catSchema)
               {
-                errors.emplace_back(petProperties.error());
+                errors.emplace_back(catSchema.error());
               }
               else
               {
-                const auto contactEmail =
-                    to_object(petProperties->at("contactEmail"),
-                              "Pet.properties.contactEmail");
-                if (!contactEmail)
+                const auto catProperties =
+                    toObject(catSchema->at("properties"), "Cat.properties");
+                if (!catProperties)
                 {
-                  errors.emplace_back(contactEmail.error());
+                  errors.emplace_back(catProperties.error());
                 }
                 else
                 {
-                  if (contactEmail->count("description") == 0U)
+                  if (catProperties->count("dateOfBirth") == 0U)
                   {
-                    errors.emplace_back(
-                        "Expected reflect-cpp field descriptions in the Pet schema.");
+                    errors.emplace_back("Expected Cat.dateOfBirth in the schema.");
                   }
-                  if (contactEmail->count("pattern") == 0U)
+                  if (catProperties->count("ageYears") != 0U)
                   {
-                    errors.emplace_back(
-                        "Expected reflect-cpp email validation metadata in the Pet schema.");
+                    errors.emplace_back("Did not expect Cat.ageYears in the schema.");
+                  }
+                  if (catProperties->count("ownerEmail") != 0U)
+                  {
+                    errors.emplace_back("Did not expect Cat.ownerEmail in the schema.");
+                  }
+
+                  if (catProperties->count("name") != 0U)
+                  {
+                    const auto nameSchema =
+                        toObject(catProperties->at("name"), "Cat.properties.name");
+                    if (!nameSchema)
+                    {
+                      errors.emplace_back(nameSchema.error());
+                    }
+                    else
+                    {
+                      if (nameSchema->count("description") == 0U)
+                      {
+                        errors.emplace_back(
+                            "Expected reflect-cpp field descriptions in the Cat schema.");
+                      }
+                      if (nameSchema->count("minLength") == 0U)
+                      {
+                        errors.emplace_back(
+                            "Expected reflect-cpp validation metadata in the Cat schema.");
+                      }
+                    }
+                  }
+
+                  if (catProperties->count("dateOfBirth") != 0U)
+                  {
+                    const auto dateOfBirthSchema = toObject(
+                        catProperties->at("dateOfBirth"),
+                        "Cat.properties.dateOfBirth");
+                    if (!dateOfBirthSchema)
+                    {
+                      errors.emplace_back(dateOfBirthSchema.error());
+                    }
+                    else if (dateOfBirthSchema->count("pattern") == 0U)
+                    {
+                      errors.emplace_back(
+                          "Expected dateOfBirth to include string/date validation metadata.");
+                    }
+                  }
+                }
+              }
+            }
+
+            if (schemas->count("CatStatus") != 0U)
+            {
+              const auto statusSchema =
+                  toObject(schemas->at("CatStatus"), "CatStatus schema");
+              if (!statusSchema)
+              {
+                errors.emplace_back(statusSchema.error());
+              }
+              else if (statusSchema->count("enum") == 0U)
+              {
+                errors.emplace_back("Expected CatStatus enum values in the schema.");
+              }
+              else
+              {
+                for (const auto *status : {"sassy", "sleepy", "zoomy", "cute"})
+                {
+                  auto contains = arrayContainsString(statusSchema->at("enum"), status);
+                  if (!contains)
+                  {
+                    errors.emplace_back(contains.error());
+                  }
+                  else if (!*contains)
+                  {
+                    errors.emplace_back("Missing CatStatus enum value: " +
+                                        std::string(status));
                   }
                 }
               }
@@ -479,30 +654,30 @@ namespace
           }
         }
 
-        const auto paths = to_object(document->at("paths"), "paths");
+        const auto paths = toObject(document->at("paths"), "paths");
         if (!paths)
         {
           errors.emplace_back(paths.error());
         }
         else
         {
-          if (paths->count("/pets") == 0U)
+          for (const auto *path :
+               {"/cats", "/cats/{catId}", "/cats/{catId}/logs"})
           {
-            errors.emplace_back("Missing /pets path.");
-          }
-          if (paths->count("/pets/{petId}") == 0U)
-          {
-            errors.emplace_back("Missing /pets/{petId} path.");
+            if (paths->count(path) == 0U)
+            {
+              errors.emplace_back("Missing path: " + std::string(path));
+            }
           }
         }
 
-        for (const auto *ref :
-             {"#/components/schemas/CreatePetRequest",
-              "#/components/schemas/Pet",
-              "#/components/schemas/ErrorResponse",
-              "#/components/schemas/PetListResponse"})
+        for (const auto *ref : {"#/components/schemas/CreateCatRequest",
+                                "#/components/schemas/Cat",
+                                "#/components/schemas/CreateCatLogEntryRequest",
+                                "#/components/schemas/CatLogEntry",
+                                "#/components/schemas/CatLogListResponse"})
         {
-          auto contains = contains_schema_ref(*spec, ref);
+          auto contains = containsSchemaRef(*spec, ref);
           if (!contains)
           {
             errors.emplace_back(contains.error());
@@ -530,33 +705,26 @@ namespace
 
 } // namespace
 
-struct Cat
-{
-  std::string breed;
-  std::string name;
-  double age = {};
-  std::string meow = "meow";
-};
-
 const auto senorDonGato =
-    Cat{.breed = "Siamese",
+    Cat{
         .name = "Senor Don Gato",
-        .age = 5.0};
+        .breed = "Siamese",
+        .dateOfBirth = "1999-08-10",
+    };
 
 int main(int argc, char **argv)
 {
   std::cout << std::format("👽uoıʇɔǝlɟǝɹ🪬") << std::endl;
   std::cout << rfl::json::write(senorDonGato) << std::endl;
-
   if (argc > 1 && std::string_view(argv[1]) == "--check")
   {
     std::cout << "Running checks..." << std::endl;
-    return run_checks();
+    return runChecks();
   }
 
   std::cout << "Building open API spec..." << std::endl;
 
-  const auto spec = build_openapi_spec();
+  const auto spec = buildOpenApiSpec();
   if (!spec)
   {
     std::cerr << "failed to build OpenAPI spec: " << spec.error() << '\n';
