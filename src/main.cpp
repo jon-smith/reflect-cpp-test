@@ -1,3 +1,4 @@
+#include <array>
 #include <expected>
 #include <iostream>
 #include <optional>
@@ -167,9 +168,9 @@ namespace
     return result.value();
   }
 
-  ExpectedVoid rewriteSchemaRefs(Json *node)
+  ExpectedVoid rewriteSchemaRefs(Json &node)
   {
-    if (const auto objectResult = node->to_object(); objectResult)
+    if (const auto objectResult = node.to_object(); objectResult)
     {
       auto object = objectResult.value();
 
@@ -180,44 +181,44 @@ namespace
         {
           return std::unexpected(ref.error());
         }
-        if (ref->starts_with("#/$defs/"))
+        if (ref.value().starts_with("#/$defs/"))
         {
-          object["$ref"] = "#/components/schemas/" + ref->substr(8);
+          object["$ref"] = "#/components/schemas/" + ref.value().substr(8);
         }
       }
 
       for (auto &[_, value] : object)
       {
-        const auto rewritten = rewriteSchemaRefs(&value);
+        const auto rewritten = rewriteSchemaRefs(value);
         if (!rewritten)
         {
           return rewritten;
         }
       }
 
-      *node = std::move(object);
+      node = std::move(object);
       return {};
     }
 
-    if (const auto arrayResult = node->to_array(); arrayResult)
+    if (const auto arrayResult = node.to_array(); arrayResult)
     {
       auto array = arrayResult.value();
       for (auto &value : array)
       {
-        const auto rewritten = rewriteSchemaRefs(&value);
+        const auto rewritten = rewriteSchemaRefs(value);
         if (!rewritten)
         {
           return rewritten;
         }
       }
-      *node = std::move(array);
+      node = std::move(array);
     }
 
     return {};
   }
 
   template <class T>
-  ExpectedVoid registerSchema(JsonObject *schemas)
+  ExpectedVoid registerSchema(JsonObject &schemas)
   {
     const auto schemaJson = parseJson(rfl::json::to_schema<T>());
     if (!schemaJson)
@@ -225,26 +226,27 @@ namespace
       return std::unexpected(schemaJson.error());
     }
 
-    const auto schemaDocument = toObject(*schemaJson, "reflect-cpp JSON schema");
+    const auto schemaDocument =
+        toObject(schemaJson.value(), "reflect-cpp JSON schema");
     if (!schemaDocument)
     {
       return std::unexpected(schemaDocument.error());
     }
 
-    auto definitions = toObject(schemaDocument->at("$defs"), "$defs");
+    auto definitions = toObject(schemaDocument.value().at("$defs"), "$defs");
     if (!definitions)
     {
       return std::unexpected(definitions.error());
     }
 
-    for (auto &[name, schema] : *definitions)
+    for (auto &[name, schema] : definitions.value())
     {
-      const auto rewritten = rewriteSchemaRefs(&schema);
+      const auto rewritten = rewriteSchemaRefs(schema);
       if (!rewritten)
       {
         return rewritten;
       }
-      (*schemas)[name] = std::move(schema);
+      schemas[name] = std::move(schema);
     }
 
     return {};
@@ -272,14 +274,14 @@ namespace
   ExpectedJson buildOpenApiSpec()
   {
     JsonObject schemas;
-    for (const auto result : {registerSchema<Cat>(&schemas),
-                              registerSchema<CatSummary>(&schemas),
-                              registerSchema<CreateCatRequest>(&schemas),
-                              registerSchema<CatLogEntry>(&schemas),
-                              registerSchema<CreateCatLogEntryRequest>(&schemas),
-                              registerSchema<CatListResponse>(&schemas),
-                              registerSchema<CatLogListResponse>(&schemas),
-                              registerSchema<ErrorResponse>(&schemas)})
+    for (const auto result : {registerSchema<Cat>(schemas),
+                              registerSchema<CatSummary>(schemas),
+                              registerSchema<CreateCatRequest>(schemas),
+                              registerSchema<CatLogEntry>(schemas),
+                              registerSchema<CreateCatLogEntryRequest>(schemas),
+                              registerSchema<CatListResponse>(schemas),
+                              registerSchema<CatLogListResponse>(schemas),
+                              registerSchema<ErrorResponse>(schemas)})
     {
       if (!result)
       {
@@ -424,12 +426,12 @@ namespace
 
       if (object.count("$ref") != 0U)
       {
-      const auto ref = toString(object.at("$ref"), "$ref");
+        const auto ref = toString(object.at("$ref"), "$ref");
         if (!ref)
         {
           return std::unexpected(ref.error());
         }
-        if (*ref == targetRef)
+        if (ref.value() == targetRef)
         {
           return true;
         }
@@ -437,12 +439,12 @@ namespace
 
       for (const auto &[_, value] : object)
       {
-      const auto contains = containsSchemaRef(value, targetRef);
+        const auto contains = containsSchemaRef(value, targetRef);
         if (!contains)
         {
           return std::unexpected(contains.error());
         }
-        if (*contains)
+        if (contains.value())
         {
           return true;
         }
@@ -454,12 +456,12 @@ namespace
       const auto array = arrayResult.value();
       for (const auto &value : array)
       {
-      const auto contains = containsSchemaRef(value, targetRef);
+        const auto contains = containsSchemaRef(value, targetRef);
         if (!contains)
         {
           return std::unexpected(contains.error());
         }
-        if (*contains)
+        if (contains.value())
         {
           return true;
         }
@@ -485,7 +487,7 @@ namespace
       {
         return std::unexpected(stringValue.error());
       }
-      if (*stringValue == expectedValue)
+      if (stringValue.value() == expectedValue)
       {
         return true;
       }
@@ -504,55 +506,60 @@ namespace
     }
     else
     {
-      const auto document = toObject(*spec, "OpenAPI document");
+      const auto document = toObject(spec.value(), "OpenAPI document");
       if (!document)
       {
         errors.emplace_back(document.error());
       }
       else
       {
-        const auto openapi = toString(document->at("openapi"), "openapi");
+        const auto openapi = toString(document.value().at("openapi"), "openapi");
         if (!openapi)
         {
           errors.emplace_back(openapi.error());
         }
-        else if (*openapi != "3.1.0")
+        else if (openapi.value() != "3.1.0")
         {
           errors.emplace_back("Expected OpenAPI version 3.1.0.");
         }
 
-        const auto components = toObject(document->at("components"), "components");
+        const auto components =
+            toObject(document.value().at("components"), "components");
         if (!components)
         {
           errors.emplace_back(components.error());
         }
         else
         {
-          const auto schemas = toObject(components->at("schemas"), "schemas");
+          const auto schemas =
+              toObject(components.value().at("schemas"), "schemas");
           if (!schemas)
           {
             errors.emplace_back(schemas.error());
           }
           else
           {
-            for (const auto *name : {"Cat",
-                                     "CatSummary",
-                                     "CreateCatRequest",
-                                     "CatLogEntry",
-                                     "CreateCatLogEntryRequest",
-                                     "CatListResponse",
-                                     "CatLogListResponse",
-                                     "ErrorResponse"})
+            for (const std::string_view name :
+                 std::array{"Cat",
+                            "CatSummary",
+                            "CreateCatRequest",
+                            "CatLogEntry",
+                            "CreateCatLogEntryRequest",
+                            "CatListResponse",
+                            "CatLogListResponse",
+                            "ErrorResponse"})
             {
-              if (schemas->count(name) == 0U)
+              if (schemas.value().count(std::string(name)) == 0U)
               {
-                errors.emplace_back("Missing component schema: " + std::string(name));
+                errors.emplace_back("Missing component schema: " +
+                                    std::string(name));
               }
             }
 
-            if (schemas->count("Cat") != 0U)
+            if (schemas.value().count("Cat") != 0U)
             {
-              const auto catSchema = toObject(schemas->at("Cat"), "Cat schema");
+              const auto catSchema =
+                  toObject(schemas.value().at("Cat"), "Cat schema");
               if (!catSchema)
               {
                 errors.emplace_back(catSchema.error());
@@ -560,42 +567,43 @@ namespace
               else
               {
                 const auto catProperties =
-                    toObject(catSchema->at("properties"), "Cat.properties");
+                    toObject(catSchema.value().at("properties"), "Cat.properties");
                 if (!catProperties)
                 {
                   errors.emplace_back(catProperties.error());
                 }
                 else
                 {
-                  if (catProperties->count("dateOfBirth") == 0U)
+                  if (catProperties.value().count("dateOfBirth") == 0U)
                   {
                     errors.emplace_back("Expected Cat.dateOfBirth in the schema.");
                   }
-                  if (catProperties->count("ageYears") != 0U)
+                  if (catProperties.value().count("ageYears") != 0U)
                   {
                     errors.emplace_back("Did not expect Cat.ageYears in the schema.");
                   }
-                  if (catProperties->count("ownerEmail") != 0U)
+                  if (catProperties.value().count("ownerEmail") != 0U)
                   {
                     errors.emplace_back("Did not expect Cat.ownerEmail in the schema.");
                   }
 
-                  if (catProperties->count("name") != 0U)
+                  if (catProperties.value().count("name") != 0U)
                   {
                     const auto nameSchema =
-                        toObject(catProperties->at("name"), "Cat.properties.name");
+                        toObject(catProperties.value().at("name"),
+                                 "Cat.properties.name");
                     if (!nameSchema)
                     {
                       errors.emplace_back(nameSchema.error());
                     }
                     else
                     {
-                      if (nameSchema->count("description") == 0U)
+                      if (nameSchema.value().count("description") == 0U)
                       {
                         errors.emplace_back(
                             "Expected reflect-cpp field descriptions in the Cat schema.");
                       }
-                      if (nameSchema->count("minLength") == 0U)
+                      if (nameSchema.value().count("minLength") == 0U)
                       {
                         errors.emplace_back(
                             "Expected reflect-cpp validation metadata in the Cat schema.");
@@ -603,16 +611,16 @@ namespace
                     }
                   }
 
-                  if (catProperties->count("dateOfBirth") != 0U)
+                  if (catProperties.value().count("dateOfBirth") != 0U)
                   {
                     const auto dateOfBirthSchema = toObject(
-                        catProperties->at("dateOfBirth"),
+                        catProperties.value().at("dateOfBirth"),
                         "Cat.properties.dateOfBirth");
                     if (!dateOfBirthSchema)
                     {
                       errors.emplace_back(dateOfBirthSchema.error());
                     }
-                    else if (dateOfBirthSchema->count("pattern") == 0U)
+                    else if (dateOfBirthSchema.value().count("pattern") == 0U)
                     {
                       errors.emplace_back(
                           "Expected dateOfBirth to include string/date validation metadata.");
@@ -622,29 +630,31 @@ namespace
               }
             }
 
-            if (schemas->count("CatStatus") != 0U)
+            if (schemas.value().count("CatStatus") != 0U)
             {
               const auto statusSchema =
-                  toObject(schemas->at("CatStatus"), "CatStatus schema");
+                  toObject(schemas.value().at("CatStatus"), "CatStatus schema");
               if (!statusSchema)
               {
                 errors.emplace_back(statusSchema.error());
               }
-              else if (statusSchema->count("enum") == 0U)
+              else if (statusSchema.value().count("enum") == 0U)
               {
                 errors.emplace_back("Expected CatStatus enum values in the schema.");
               }
               else
               {
-                for (const auto *status : {"sassy", "sleepy", "zoomy", "cute"})
+                for (const std::string_view status :
+                     std::array{"sassy", "sleepy", "zoomy", "cute"})
                 {
                   const auto contains =
-                      arrayContainsString(statusSchema->at("enum"), status);
+                      arrayContainsString(statusSchema.value().at("enum"),
+                                          status);
                   if (!contains)
                   {
                     errors.emplace_back(contains.error());
                   }
-                  else if (!*contains)
+                  else if (!contains.value())
                   {
                     errors.emplace_back("Missing CatStatus enum value: " +
                                         std::string(status));
@@ -655,35 +665,36 @@ namespace
           }
         }
 
-        const auto paths = toObject(document->at("paths"), "paths");
+        const auto paths = toObject(document.value().at("paths"), "paths");
         if (!paths)
         {
           errors.emplace_back(paths.error());
         }
         else
         {
-          for (const auto *path :
-               {"/cats", "/cats/{catId}", "/cats/{catId}/logs"})
+          for (const std::string_view path :
+               std::array{"/cats", "/cats/{catId}", "/cats/{catId}/logs"})
           {
-            if (paths->count(path) == 0U)
+            if (paths.value().count(std::string(path)) == 0U)
             {
               errors.emplace_back("Missing path: " + std::string(path));
             }
           }
         }
 
-        for (const auto *ref : {"#/components/schemas/CreateCatRequest",
-                                "#/components/schemas/Cat",
-                                "#/components/schemas/CreateCatLogEntryRequest",
-                                "#/components/schemas/CatLogEntry",
-                                "#/components/schemas/CatLogListResponse"})
+        for (const std::string_view ref :
+             std::array{"#/components/schemas/CreateCatRequest",
+                        "#/components/schemas/Cat",
+                        "#/components/schemas/CreateCatLogEntryRequest",
+                        "#/components/schemas/CatLogEntry",
+                        "#/components/schemas/CatLogListResponse"})
         {
-          const auto contains = containsSchemaRef(*spec, ref);
+          const auto contains = containsSchemaRef(spec.value(), std::string(ref));
           if (!contains)
           {
             errors.emplace_back(contains.error());
           }
-          else if (!*contains)
+          else if (!contains.value())
           {
             errors.emplace_back("Missing schema reference: " + std::string(ref));
           }
@@ -732,7 +743,7 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  rfl::json::write(*spec, std::cout, rfl::json::pretty);
+  rfl::json::write(spec.value(), std::cout, rfl::json::pretty);
   std::cout << '\n';
   return 0;
 }
