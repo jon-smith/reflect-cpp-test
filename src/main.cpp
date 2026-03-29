@@ -20,31 +20,21 @@ enum class PetStatus
 
 struct PetSummary
 {
-  rfl::Rename<"petId",
-              rfl::Description<"Unique pet identifier used in URLs.",
-                               std::string>>
-      pet_id;
+  rfl::Description<"Unique pet identifier used in URLs.", std::string> petId;
   rfl::Description<"Display name shown in pet listings.", NonEmptyString> name;
   rfl::Description<"Current lifecycle state for the pet.", PetStatus> status;
 };
 
 struct Pet
 {
-  rfl::Rename<"petId",
-              rfl::Description<"Unique pet identifier used in URLs.",
-                               std::string>>
-      pet_id;
+  rfl::Description<"Unique pet identifier used in URLs.", std::string> petId;
   rfl::Description<"Display name presented to API clients.", NonEmptyString>
       name;
   rfl::Description<"Optional short tag used by clients for filtering.",
                    std::optional<std::string>>
       tag;
-  rfl::Rename<"ageYears",
-              rfl::Description<"Approximate age in whole years.", AgeYears>>
-      age_years;
-  rfl::Rename<"contactEmail",
-              rfl::Description<"Primary adoption contact email.", rfl::Email>>
-      contact_email;
+  rfl::Description<"Approximate age in whole years.", AgeYears> ageYears;
+  rfl::Description<"Primary adoption contact email.", rfl::Email> contactEmail;
   rfl::Description<"Vaccinations already recorded for the pet.",
                    std::vector<NonEmptyString>>
       vaccinations;
@@ -58,12 +48,8 @@ struct CreatePetRequest
   rfl::Description<"Optional short tag used by clients for filtering.",
                    std::optional<std::string>>
       tag;
-  rfl::Rename<"ageYears",
-              rfl::Description<"Approximate age in whole years.", AgeYears>>
-      age_years;
-  rfl::Rename<"contactEmail",
-              rfl::Description<"Primary adoption contact email.", rfl::Email>>
-      contact_email;
+  rfl::Description<"Approximate age in whole years.", AgeYears> ageYears;
+  rfl::Description<"Primary adoption contact email.", rfl::Email> contactEmail;
   rfl::Description<"Vaccinations already recorded for the pet.",
                    std::vector<NonEmptyString>>
       vaccinations;
@@ -390,16 +376,16 @@ namespace
       const auto pet_schema = to_object_or_throw(schemas.at("Pet"), "Pet schema");
       const auto pet_properties =
           to_object_or_throw(pet_schema.at("properties"), "Pet.properties");
-      const auto contact_email =
+      const auto contactEmail =
           to_object_or_throw(pet_properties.at("contactEmail"),
                              "Pet.properties.contactEmail");
 
-      if (contact_email.count("description") == 0U)
+      if (contactEmail.count("description") == 0U)
       {
         errors.emplace_back(
             "Expected reflect-cpp field descriptions in the Pet schema.");
       }
-      if (contact_email.count("pattern") == 0U)
+      if (contactEmail.count("pattern") == 0U)
       {
         errors.emplace_back(
             "Expected reflect-cpp email validation metadata in the Pet schema.");
