@@ -121,7 +121,8 @@ namespace
   using ExpectedVoid = std::expected<void, std::string>;
   using ExpectedBool = std::expected<bool, std::string>;
 
-  Json makeObject(std::initializer_list<std::pair<std::string, Json>> fields)
+  Json makeObject(
+      const std::initializer_list<std::pair<std::string, Json>> fields)
   {
     JsonObject object;
     for (const auto &[key, value] : fields)
@@ -131,7 +132,7 @@ namespace
     return object;
   }
 
-  Json makeArray(std::initializer_list<Json> values)
+  Json makeArray(const std::initializer_list<Json> values)
   {
     return JsonArray(values);
   }
@@ -146,7 +147,7 @@ namespace
     return result.value();
   }
 
-  ExpectedJsonObject toObject(const Json &json, std::string_view context)
+  ExpectedJsonObject toObject(const Json &json, const std::string_view context)
   {
     const auto result = json.to_object();
     if (!result)
@@ -157,7 +158,7 @@ namespace
     return result.value();
   }
 
-  ExpectedString toString(const Json &json, std::string_view context)
+  ExpectedString toString(const Json &json, const std::string_view context)
   {
     const auto result = json.to_string();
     if (!result)
@@ -257,7 +258,8 @@ namespace
     return makeObject({{"$ref", "#/components/schemas/" + name}});
   }
 
-  Json jsonResponse(const std::string &description, const std::string &schemaName)
+  Json jsonResponse(const std::string &description,
+                    const std::string &schemaName)
   {
     return makeObject(
         {{"description", description},
@@ -418,7 +420,8 @@ namespace
     });
   }
 
-  ExpectedBool containsSchemaRef(const Json &node, const std::string &targetRef)
+  ExpectedBool containsSchemaRef(const Json &node,
+                                 const std::string &targetRef)
   {
     if (const auto objectResult = node.to_object(); objectResult)
     {
@@ -471,7 +474,8 @@ namespace
     return false;
   }
 
-  ExpectedBool arrayContainsString(const Json &json, std::string_view expectedValue)
+  ExpectedBool arrayContainsString(const Json &json,
+                                   const std::string_view expectedValue)
   {
     const auto array = json.to_array();
     if (!array)
@@ -724,7 +728,7 @@ const auto senorDonGato =
         .dateOfBirth = "1999-08-10",
     };
 
-int main(int argc, char **argv)
+int main(const int argc, char **const argv)
 {
   std::cout << std::format("👽uoıʇɔǝlɟǝɹ🪬") << std::endl;
   std::cout << rfl::json::write(senorDonGato) << std::endl;
