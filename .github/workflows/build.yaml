@@ -45,3 +45,6 @@ jobs:
 
       - name: Build CMake project
         run: cmake --build out/build/${{ env.preset }}
+
+      - name: Run tests
+        run: ctest --test-dir out/build/${{ env.preset }} --output-on-failure
