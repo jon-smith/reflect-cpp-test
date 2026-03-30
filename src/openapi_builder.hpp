@@ -12,6 +12,10 @@
 using OpenApiJson = rfl::Generic;
 using OpenApiSchemaRegistrar =
     std::function<std::expected<void, std::string>(OpenApiJson::Object &)>;
+using OpenApiExpectedJsonObject =
+    std::expected<OpenApiJson::Object, std::string>;
+using OpenApiExpectedString = std::expected<std::string, std::string>;
+using OpenApiExpectedBool = std::expected<bool, std::string>;
 
 struct OpenApiInfo
 {
@@ -79,6 +83,26 @@ struct OpenApiSpecConfig
   std::vector<OpenApiSchemaRegistrar> schemaRegistrations;
 };
 
+OpenApiJson makeObject(
+    std::initializer_list<std::pair<std::string, OpenApiJson>> fields);
+
+OpenApiExpectedJsonObject toObject(const OpenApiJson &json,
+                                   std::string_view context);
+
+OpenApiExpectedString toString(const OpenApiJson &json,
+                               std::string_view context);
+
+OpenApiExpectedBool containsSchemaRef(const OpenApiJson &node,
+                                      const std::string &targetRef);
+
+OpenApiExpectedBool arrayContainsString(const OpenApiJson &json,
+                                        std::string_view expectedValue);
+
+OpenApiJson stringSchema();
+
+OpenApiResponse errorResponse(const std::string &statusCode,
+                              const std::string &description);
+
 std::expected<void, std::string>
 registerGeneratedSchemaDocument(const std::string &schemaJson,
                                 OpenApiJson::Object &schemas);
@@ -89,7 +113,8 @@ buildOpenApiSpec(const OpenApiSpecConfig &config);
 template <class T>
 OpenApiSchemaRegistrar makeOpenApiSchemaRegistration()
 {
-  return [](OpenApiJson::Object &schemas) -> std::expected<void, std::string> {
+  return [](OpenApiJson::Object &schemas) -> std::expected<void, std::string>
+  {
     return registerGeneratedSchemaDocument(rfl::json::to_schema<T>(), schemas);
   };
 }

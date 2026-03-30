@@ -12,20 +12,7 @@ using Json = OpenApiJson;
 using JsonArray = Json::Array;
 using JsonObject = Json::Object;
 using ExpectedJson = std::expected<Json, std::string>;
-using ExpectedJsonObject = std::expected<JsonObject, std::string>;
-using ExpectedString = std::expected<std::string, std::string>;
 using ExpectedVoid = std::expected<void, std::string>;
-
-Json makeObject(
-    const std::initializer_list<std::pair<std::string, Json>> fields)
-{
-  JsonObject object;
-  for (const auto &[key, value] : fields)
-  {
-    object.insert(key, value);
-  }
-  return object;
-}
 
 Json makeArray(const std::initializer_list<Json> values)
 {
@@ -38,28 +25,6 @@ ExpectedJson parseJson(const std::string &json)
   if (!result)
   {
     return std::unexpected("Failed to parse JSON: " + result.error().what());
-  }
-  return result.value();
-}
-
-ExpectedJsonObject toObject(const Json &json, const std::string_view context)
-{
-  const auto result = json.to_object();
-  if (!result)
-  {
-    return std::unexpected("Expected JSON object for " + std::string(context) +
-                           ": " + result.error().what());
-  }
-  return result.value();
-}
-
-ExpectedString toString(const Json &json, const std::string_view context)
-{
-  const auto result = json.to_string();
-  if (!result)
-  {
-    return std::unexpected("Expected JSON string for " + std::string(context) +
-                           ": " + result.error().what());
   }
   return result.value();
 }
@@ -195,6 +160,136 @@ Json makePathsObject(const std::vector<OpenApiPathItem> &paths)
 }
 
 } // namespace
+
+OpenApiJson makeObject(
+    const std::initializer_list<std::pair<std::string, OpenApiJson>> fields)
+{
+  JsonObject object;
+  for (const auto &[key, value] : fields)
+  {
+    object.insert(key, value);
+  }
+  return object;
+}
+
+OpenApiExpectedJsonObject toObject(const OpenApiJson &json,
+                                   const std::string_view context)
+{
+  const auto result = json.to_object();
+  if (!result)
+  {
+    return std::unexpected("Expected JSON object for " + std::string(context) +
+                           ": " + result.error().what());
+  }
+  return result.value();
+}
+
+OpenApiExpectedString toString(const OpenApiJson &json,
+                               const std::string_view context)
+{
+  const auto result = json.to_string();
+  if (!result)
+  {
+    return std::unexpected("Expected JSON string for " + std::string(context) +
+                           ": " + result.error().what());
+  }
+  return result.value();
+}
+
+OpenApiExpectedBool containsSchemaRef(const OpenApiJson &node,
+                                      const std::string &targetRef)
+{
+  if (const auto objectResult = node.to_object(); objectResult)
+  {
+    const auto object = objectResult.value();
+
+    if (object.count("$ref") != 0U)
+    {
+      const auto ref = toString(object.at("$ref"), "$ref");
+      if (!ref)
+      {
+        return std::unexpected(ref.error());
+      }
+      if (ref.value() == targetRef)
+      {
+        return true;
+      }
+    }
+
+    for (const auto &[_, value] : object)
+    {
+      const auto contains = containsSchemaRef(value, targetRef);
+      if (!contains)
+      {
+        return std::unexpected(contains.error());
+      }
+      if (contains.value())
+      {
+        return true;
+      }
+    }
+  }
+
+  if (const auto arrayResult = node.to_array(); arrayResult)
+  {
+    const auto array = arrayResult.value();
+    for (const auto &value : array)
+    {
+      const auto contains = containsSchemaRef(value, targetRef);
+      if (!contains)
+      {
+        return std::unexpected(contains.error());
+      }
+      if (contains.value())
+      {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+OpenApiExpectedBool arrayContainsString(const OpenApiJson &json,
+                                        const std::string_view expectedValue)
+{
+  const auto array = json.to_array();
+  if (!array)
+  {
+    return std::unexpected("Expected JSON array while checking enum values: " +
+                           array.error().what());
+  }
+
+  for (const auto &value : array.value())
+  {
+    const auto stringValue = toString(value, "array value");
+    if (!stringValue)
+    {
+      return std::unexpected(stringValue.error());
+    }
+    if (stringValue.value() == expectedValue)
+    {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+OpenApiJson stringSchema()
+{
+  return makeObject({{"type", "string"}});
+}
+
+OpenApiResponse errorResponse(const std::string &statusCode,
+                              const std::string &description)
+{
+  return OpenApiResponse{
+      .statusCode = statusCode,
+      .description = description,
+      .schemaName = "ErrorResponse",
+  };
+}
 
 ExpectedVoid registerGeneratedSchemaDocument(const std::string &schemaJson,
                                              JsonObject &schemas)
