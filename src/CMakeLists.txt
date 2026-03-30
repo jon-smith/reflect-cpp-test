@@ -1,5 +1,6 @@
 add_executable(reflect_cpp_test
   main.cpp
+  openapi_builder.cpp
   openapi_demo.cpp
 )
 

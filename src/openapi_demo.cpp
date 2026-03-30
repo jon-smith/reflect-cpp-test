@@ -7,399 +7,306 @@
 #include <string_view>
 #include <vector>
 
-#include <rfl/json.hpp>
-
 #include "cat_api_types.hpp"
 
 namespace
 {
 
-using Json = rfl::Generic;
-using JsonArray = Json::Array;
-using JsonObject = Json::Object;
-using ExpectedJson = std::expected<Json, std::string>;
-using ExpectedJsonObject = std::expected<JsonObject, std::string>;
-using ExpectedString = std::expected<std::string, std::string>;
-using ExpectedVoid = std::expected<void, std::string>;
-using ExpectedBool = std::expected<bool, std::string>;
-
-Json makeObject(
-    const std::initializer_list<std::pair<std::string, Json>> fields)
+OpenApiParameter catIdParameter(const std::string &description)
 {
-  JsonObject object;
-  for (const auto &[key, value] : fields)
-  {
-    object.insert(key, value);
-  }
-  return object;
+  return OpenApiParameter{
+      .name = "catId",
+      .in = "path",
+      .required = true,
+      .description = description,
+      .schema = stringSchema(),
+  };
 }
 
-Json makeArray(const std::initializer_list<Json> values)
+OpenApiSpecConfig makeCatLogOpenApiConfig()
 {
-  return JsonArray(values);
+  return OpenApiSpecConfig{
+      .info =
+          {
+              .title = "reflect-cpp CatLog API",
+              .version = "1.0.0",
+              .description =
+                  "OpenAPI 3.1 document assembled from reflect-cpp-generated "
+                  "JSON Schema components for a CatLog API.",
+          },
+      .servers =
+          {{
+              .url = "http://localhost:8080",
+              .description = "Local development server",
+          }},
+      .paths =
+          {
+              OpenApiPathItem{
+                  .path = "/cats",
+                  .operations =
+                      {
+                          OpenApiPathOperation{
+                              .method = "get",
+                              .operation =
+                                  {
+                                      .summary = "List cats",
+                                      .operationId = "listCats",
+                                      .responses =
+                                          {
+                                              OpenApiResponse{
+                                                  .statusCode = "200",
+                                                  .description =
+                                                      "A list of cats.",
+                                                  .schemaName =
+                                                      "CatListResponse",
+                                              },
+                                              errorResponse(
+                                                  "500",
+                                                  "Unexpected server error."),
+                                          },
+                                  },
+                          },
+                          OpenApiPathOperation{
+                              .method = "post",
+                              .operation =
+                                  {
+                                      .summary = "Create a cat",
+                                      .operationId = "createCat",
+                                      .requestBody =
+                                          OpenApiRequestBody{
+                                              .required = true,
+                                              .schemaName =
+                                                  "CreateCatRequest",
+                                          },
+                                      .responses =
+                                          {
+                                              OpenApiResponse{
+                                                  .statusCode = "201",
+                                                  .description =
+                                                      "The created cat.",
+                                                  .schemaName = "Cat",
+                                              },
+                                              errorResponse(
+                                                  "400",
+                                                  "The request body was invalid."),
+                                          },
+                                  },
+                          },
+                      },
+              },
+              OpenApiPathItem{
+                  .path = "/cats/{catId}",
+                  .operations =
+                      {
+                          OpenApiPathOperation{
+                              .method = "get",
+                              .operation =
+                                  {
+                                      .summary = "Get a cat by id",
+                                      .operationId = "getCatById",
+                                      .parameters =
+                                          {catIdParameter(
+                                              "Unique identifier for a "
+                                              "previously created cat.")},
+                                      .responses =
+                                          {
+                                              OpenApiResponse{
+                                                  .statusCode = "200",
+                                                  .description =
+                                                      "The requested cat.",
+                                                  .schemaName = "Cat",
+                                              },
+                                              errorResponse(
+                                                  "404",
+                                                  "The cat was not found."),
+                                          },
+                                  },
+                          },
+                      },
+              },
+              OpenApiPathItem{
+                  .path = "/cats/{catId}/logs",
+                  .operations =
+                      {
+                          OpenApiPathOperation{
+                              .method = "get",
+                              .operation =
+                                  {
+                                      .summary = "List cat status logs",
+                                      .operationId = "listCatLogs",
+                                      .parameters =
+                                          {catIdParameter(
+                                              "Unique identifier for the cat "
+                                              "whose logs are being requested.")},
+                                      .responses =
+                                          {
+                                              OpenApiResponse{
+                                                  .statusCode = "200",
+                                                  .description =
+                                                      "Status log entries for "
+                                                      "the cat.",
+                                                  .schemaName =
+                                                      "CatLogListResponse",
+                                              },
+                                              errorResponse(
+                                                  "404",
+                                                  "The cat was not found."),
+                                          },
+                                  },
+                          },
+                          OpenApiPathOperation{
+                              .method = "post",
+                              .operation =
+                                  {
+                                      .summary =
+                                          "Create a cat status log entry",
+                                      .operationId = "createCatLogEntry",
+                                      .parameters =
+                                          {catIdParameter(
+                                              "Unique identifier for the cat "
+                                              "receiving the new log entry.")},
+                                      .requestBody =
+                                          OpenApiRequestBody{
+                                              .required = true,
+                                              .schemaName =
+                                                  "CreateCatLogEntryRequest",
+                                          },
+                                      .responses =
+                                          {
+                                              OpenApiResponse{
+                                                  .statusCode = "201",
+                                                  .description =
+                                                      "The created log entry.",
+                                                  .schemaName = "CatLogEntry",
+                                              },
+                                              errorResponse(
+                                                  "400",
+                                                  "The request body was invalid."),
+                                              errorResponse(
+                                                  "404",
+                                                  "The cat was not found."),
+                                          },
+                                  },
+                          },
+                      },
+              },
+          },
+      .schemaRegistrations =
+          {
+              makeOpenApiSchemaRegistration<Cat>(),
+              makeOpenApiSchemaRegistration<CatSummary>(),
+              makeOpenApiSchemaRegistration<CreateCatRequest>(),
+              makeOpenApiSchemaRegistration<CatLogEntry>(),
+              makeOpenApiSchemaRegistration<CreateCatLogEntryRequest>(),
+              makeOpenApiSchemaRegistration<CatListResponse>(),
+              makeOpenApiSchemaRegistration<CatLogListResponse>(),
+              makeOpenApiSchemaRegistration<ErrorResponse>(),
+          },
+  };
 }
 
-ExpectedJson parseJson(const std::string &json)
+void appendBuilderChecks(std::vector<std::string> &errors)
 {
-  const auto result = rfl::json::read<Json>(json);
-  if (!result)
+  const auto minimalSpec = buildOpenApiSpec(OpenApiSpecConfig{
+      .info =
+          {
+              .title = "Minimal API",
+              .version = "0.1.0",
+              .description = "Generic builder smoke test.",
+          },
+      .paths =
+          {
+              OpenApiPathItem{
+                  .path = "/ping",
+                  .operations =
+                      {
+                          OpenApiPathOperation{
+                              .method = "get",
+                              .operation =
+                                  {
+                                      .summary = "Ping",
+                                      .operationId = "ping",
+                                      .responses =
+                                          {
+                                              OpenApiResponse{
+                                                  .statusCode = "200",
+                                                  .description = "pong",
+                                                  .schemaName = "ErrorResponse",
+                                              },
+                                          },
+                                  },
+                          },
+                      },
+              },
+          },
+      .schemaRegistrations = {makeOpenApiSchemaRegistration<ErrorResponse>()},
+  });
+
+  if (!minimalSpec)
   {
-    return std::unexpected("Failed to parse JSON: " + result.error().what());
-  }
-  return result.value();
-}
-
-ExpectedJsonObject toObject(const Json &json, const std::string_view context)
-{
-  const auto result = json.to_object();
-  if (!result)
-  {
-    return std::unexpected("Expected JSON object for " + std::string(context) +
-                           ": " + result.error().what());
-  }
-  return result.value();
-}
-
-ExpectedString toString(const Json &json, const std::string_view context)
-{
-  const auto result = json.to_string();
-  if (!result)
-  {
-    return std::unexpected("Expected JSON string for " + std::string(context) +
-                           ": " + result.error().what());
-  }
-  return result.value();
-}
-
-ExpectedVoid rewriteSchemaRefs(Json &node)
-{
-  if (const auto objectResult = node.to_object(); objectResult)
-  {
-    auto object = objectResult.value();
-
-    if (object.count("$ref") != 0U)
-    {
-      const auto ref = toString(object.at("$ref"), "$ref");
-      if (!ref)
-      {
-        return std::unexpected(ref.error());
-      }
-      if (ref.value().starts_with("#/$defs/"))
-      {
-        object["$ref"] = "#/components/schemas/" + ref.value().substr(8);
-      }
-    }
-
-    for (auto &[_, value] : object)
-    {
-      const auto rewritten = rewriteSchemaRefs(value);
-      if (!rewritten)
-      {
-        return rewritten;
-      }
-    }
-
-    node = std::move(object);
-    return {};
+    errors.emplace_back(minimalSpec.error());
+    return;
   }
 
-  if (const auto arrayResult = node.to_array(); arrayResult)
+  const auto minimalDocument = toObject(minimalSpec.value(), "minimal document");
+  if (!minimalDocument)
   {
-    auto array = arrayResult.value();
-    for (auto &value : array)
-    {
-      const auto rewritten = rewriteSchemaRefs(value);
-      if (!rewritten)
-      {
-        return rewritten;
-      }
-    }
-    node = std::move(array);
+    errors.emplace_back(minimalDocument.error());
+    return;
   }
 
-  return {};
-}
-
-template <class T>
-ExpectedVoid registerSchema(JsonObject &schemas)
-{
-  const auto schemaJson = parseJson(rfl::json::to_schema<T>());
-  if (!schemaJson)
+  if (minimalDocument.value().count("servers") != 0U)
   {
-    return std::unexpected(schemaJson.error());
+    errors.emplace_back("Did not expect servers for a config without servers.");
   }
 
-  const auto schemaDocument =
-      toObject(schemaJson.value(), "reflect-cpp JSON schema");
-  if (!schemaDocument)
+  const auto minimalPaths =
+      toObject(minimalDocument.value().at("paths"), "minimal paths");
+  if (!minimalPaths)
   {
-    return std::unexpected(schemaDocument.error());
+    errors.emplace_back(minimalPaths.error());
+    return;
   }
 
-  auto definitions = toObject(schemaDocument.value().at("$defs"), "$defs");
-  if (!definitions)
+  const auto pingPath = toObject(minimalPaths.value().at("/ping"), "/ping path");
+  if (!pingPath)
   {
-    return std::unexpected(definitions.error());
+    errors.emplace_back(pingPath.error());
+    return;
   }
 
-  for (auto &[name, schema] : definitions.value())
+  const auto pingOperation =
+      toObject(pingPath.value().at("get"), "/ping get operation");
+  if (!pingOperation)
   {
-    const auto rewritten = rewriteSchemaRefs(schema);
-    if (!rewritten)
-    {
-      return rewritten;
-    }
-    schemas[name] = std::move(schema);
+    errors.emplace_back(pingOperation.error());
+    return;
   }
 
-  return {};
-}
-
-Json schemaRef(const std::string &name)
-{
-  return makeObject({{"$ref", "#/components/schemas/" + name}});
-}
-
-Json jsonResponse(const std::string &description, const std::string &schemaName)
-{
-  return makeObject(
-      {{"description", description},
-       {"content",
-        makeObject({{"application/json",
-                     makeObject({{"schema", schemaRef(schemaName)}})}})}});
-}
-
-Json errorResponse(const std::string &description)
-{
-  return jsonResponse(description, "ErrorResponse");
-}
-
-ExpectedBool containsSchemaRef(const Json &node, const std::string &targetRef)
-{
-  if (const auto objectResult = node.to_object(); objectResult)
+  if (pingOperation.value().count("requestBody") != 0U)
   {
-    const auto object = objectResult.value();
-
-    if (object.count("$ref") != 0U)
-    {
-      const auto ref = toString(object.at("$ref"), "$ref");
-      if (!ref)
-      {
-        return std::unexpected(ref.error());
-      }
-      if (ref.value() == targetRef)
-      {
-        return true;
-      }
-    }
-
-    for (const auto &[_, value] : object)
-    {
-      const auto contains = containsSchemaRef(value, targetRef);
-      if (!contains)
-      {
-        return std::unexpected(contains.error());
-      }
-      if (contains.value())
-      {
-        return true;
-      }
-    }
+    errors.emplace_back(
+        "Did not expect requestBody for an operation without one.");
   }
 
-  if (const auto arrayResult = node.to_array(); arrayResult)
+  const auto contains =
+      containsSchemaRef(minimalSpec.value(), "#/components/schemas/ErrorResponse");
+  if (!contains)
   {
-    const auto array = arrayResult.value();
-    for (const auto &value : array)
-    {
-      const auto contains = containsSchemaRef(value, targetRef);
-      if (!contains)
-      {
-        return std::unexpected(contains.error());
-      }
-      if (contains.value())
-      {
-        return true;
-      }
-    }
+    errors.emplace_back(contains.error());
   }
-
-  return false;
-}
-
-ExpectedBool arrayContainsString(const Json &json,
-                                 const std::string_view expectedValue)
-{
-  const auto array = json.to_array();
-  if (!array)
+  else if (!contains.value())
   {
-    return std::unexpected("Expected JSON array while checking enum values: " +
-                           array.error().what());
+    errors.emplace_back(
+        "Expected generic builder responses to use component schema refs.");
   }
-
-  for (const auto &value : array.value())
-  {
-    const auto stringValue = toString(value, "array value");
-    if (!stringValue)
-    {
-      return std::unexpected(stringValue.error());
-    }
-    if (stringValue.value() == expectedValue)
-    {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 } // namespace
 
 std::expected<rfl::Generic, std::string> buildOpenApiSpec()
 {
-  JsonObject schemas;
-  for (const auto result : {registerSchema<Cat>(schemas),
-                            registerSchema<CatSummary>(schemas),
-                            registerSchema<CreateCatRequest>(schemas),
-                            registerSchema<CatLogEntry>(schemas),
-                            registerSchema<CreateCatLogEntryRequest>(schemas),
-                            registerSchema<CatListResponse>(schemas),
-                            registerSchema<CatLogListResponse>(schemas),
-                            registerSchema<ErrorResponse>(schemas)})
-  {
-    if (!result)
-    {
-      return std::unexpected(result.error());
-    }
-  }
-
-  return makeObject({
-      {"openapi", "3.1.0"},
-      {"info",
-       makeObject({
-           {"title", "reflect-cpp CatLog API"},
-           {"version", "1.0.0"},
-           {"description",
-            "OpenAPI 3.1 document assembled from reflect-cpp-generated JSON "
-            "Schema components for a CatLog API."},
-       })},
-      {"servers",
-       makeArray({makeObject({
-           {"url", "http://localhost:8080"},
-           {"description", "Local development server"},
-       })})},
-      {"paths",
-       makeObject({
-           {"/cats",
-            makeObject({
-                {"get",
-                 makeObject({
-                     {"summary", "List cats"},
-                     {"operationId", "listCats"},
-                     {"responses",
-                      makeObject({
-                          {"200", jsonResponse("A list of cats.", "CatListResponse")},
-                          {"500", errorResponse("Unexpected server error.")},
-                      })},
-                 })},
-                {"post",
-                 makeObject({
-                     {"summary", "Create a cat"},
-                     {"operationId", "createCat"},
-                     {"requestBody",
-                      makeObject({
-                          {"required", true},
-                          {"content",
-                           makeObject({{"application/json",
-                                        makeObject({{"schema",
-                                                     schemaRef("CreateCatRequest")}})}})},
-                      })},
-                     {"responses",
-                      makeObject({
-                          {"201", jsonResponse("The created cat.", "Cat")},
-                          {"400", errorResponse("The request body was invalid.")},
-                      })},
-                 })},
-            })},
-           {"/cats/{catId}",
-            makeObject({
-                {"get",
-                 makeObject({
-                     {"summary", "Get a cat by id"},
-                     {"operationId", "getCatById"},
-                     {"parameters",
-                      makeArray({makeObject({
-                          {"name", "catId"},
-                          {"in", "path"},
-                          {"required", true},
-                          {"description",
-                           "Unique identifier for a previously created cat."},
-                          {"schema", makeObject({{"type", "string"}})},
-                      })})},
-                     {"responses",
-                      makeObject({
-                          {"200", jsonResponse("The requested cat.", "Cat")},
-                          {"404", errorResponse("The cat was not found.")},
-                      })},
-                 })},
-            })},
-           {"/cats/{catId}/logs",
-            makeObject({
-                {"get",
-                 makeObject({
-                     {"summary", "List cat status logs"},
-                     {"operationId", "listCatLogs"},
-                     {"parameters",
-                      makeArray({makeObject({
-                          {"name", "catId"},
-                          {"in", "path"},
-                          {"required", true},
-                          {"description",
-                           "Unique identifier for the cat whose logs are being requested."},
-                          {"schema", makeObject({{"type", "string"}})},
-                      })})},
-                     {"responses",
-                      makeObject({
-                          {"200",
-                           jsonResponse("Status log entries for the cat.",
-                                        "CatLogListResponse")},
-                          {"404", errorResponse("The cat was not found.")},
-                      })},
-                 })},
-                {"post",
-                 makeObject({
-                     {"summary", "Create a cat status log entry"},
-                     {"operationId", "createCatLogEntry"},
-                     {"parameters",
-                      makeArray({makeObject({
-                          {"name", "catId"},
-                          {"in", "path"},
-                          {"required", true},
-                          {"description",
-                           "Unique identifier for the cat receiving the new log entry."},
-                          {"schema", makeObject({{"type", "string"}})},
-                      })})},
-                     {"requestBody",
-                      makeObject({
-                          {"required", true},
-                          {"content",
-                           makeObject({{"application/json",
-                                        makeObject(
-                                            {{"schema",
-                                              schemaRef("CreateCatLogEntryRequest")}})}})},
-                      })},
-                     {"responses",
-                      makeObject({
-                          {"201",
-                           jsonResponse("The created log entry.", "CatLogEntry")},
-                          {"400", errorResponse("The request body was invalid.")},
-                          {"404", errorResponse("The cat was not found.")},
-                      })},
-                 })},
-            })},
-       })},
-      {"components", makeObject({{"schemas", std::move(schemas)}})},
-  });
+  return buildOpenApiSpec(makeCatLogOpenApiConfig());
 }
 
 int runChecks()
@@ -607,6 +514,8 @@ int runChecks()
       }
     }
   }
+
+  appendBuilderChecks(errors);
 
   if (!errors.empty())
   {
