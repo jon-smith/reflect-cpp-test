@@ -8,12 +8,11 @@
 #include "cat_api_types.hpp"
 #include "openapi_demo.hpp"
 
-const auto senorDonGato =
-    Cat{
-        .name = "Senor Don Gato",
-        .breed = "Siamese",
-        .dateOfBirth = "1999-08-10",
-    };
+const auto senorDonGato = Cat{
+    .name = "Senor Don Gato",
+    .breed = "Siamese",
+    .dateOfBirth = "1999-08-10",
+};
 
 int main(const int argc, char **const argv)
 {

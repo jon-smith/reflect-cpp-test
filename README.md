@@ -79,3 +79,17 @@ Or run the executable directly:
 ```sh
 out/build/clang-release/src/reflect_cpp_test --check
 ```
+
+## Format
+
+Apply `clang-format` to the tracked C++ files:
+
+```sh
+git ls-files '*.cpp' '*.hpp' | xargs clang-format -i
+```
+
+Run a non-mutating formatting check locally using the same file selection as CI:
+
+```sh
+git ls-files '*.cpp' '*.hpp' | xargs clang-format --dry-run --Werror
+```
