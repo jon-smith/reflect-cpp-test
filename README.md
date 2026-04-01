@@ -67,17 +67,12 @@ The binary prints a pretty-formatted OpenAPI 3.1 JSON document to `stdout`.
 
 ## Verify
 
-The repo also wires in a lightweight smoke test that validates the generated
-document:
+The repo validates OpenAPI generation with a focused Catch2 test suite that
+covers schema import/ref rewriting, document assembly, and end-to-end demo
+validation:
 
 ```sh
 ctest --test-dir out/build/clang-release --output-on-failure
-```
-
-Or run the executable directly:
-
-```sh
-out/build/clang-release/src/reflect_cpp_test --check
 ```
 
 ## Format
