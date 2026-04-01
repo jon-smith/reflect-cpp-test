@@ -9,6 +9,21 @@ on:
       - main
 
 jobs:
+  format:
+    runs-on: ubuntu-24.04
+
+    name: Format Check
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+
+      - name: Check formatting
+        run: git ls-files '*.cpp' '*.hpp' | xargs clang-format --dry-run --Werror
+
   build:
     strategy:
       fail-fast: false

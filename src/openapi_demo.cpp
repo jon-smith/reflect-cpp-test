@@ -30,15 +30,13 @@ OpenApiSpecConfig makeCatLogOpenApiConfig()
           {
               .title = "reflect-cpp CatLog API",
               .version = "1.0.0",
-              .description =
-                  "OpenAPI 3.1 document assembled from reflect-cpp-generated "
-                  "JSON Schema components for a CatLog API.",
+              .description = "OpenAPI 3.1 document assembled from reflect-cpp-generated "
+                             "JSON Schema components for a CatLog API.",
           },
-      .servers =
-          {{
-              .url = "http://localhost:8080",
-              .description = "Local development server",
-          }},
+      .servers = {{
+          .url = "http://localhost:8080",
+          .description = "Local development server",
+      }},
       .paths =
           {
               OpenApiPathItem{
@@ -55,14 +53,10 @@ OpenApiSpecConfig makeCatLogOpenApiConfig()
                                           {
                                               OpenApiResponse{
                                                   .statusCode = "200",
-                                                  .description =
-                                                      "A list of cats.",
-                                                  .schemaName =
-                                                      "CatListResponse",
+                                                  .description = "A list of cats.",
+                                                  .schemaName = "CatListResponse",
                                               },
-                                              errorResponse(
-                                                  "500",
-                                                  "Unexpected server error."),
+                                              errorResponse("500", "Unexpected server error."),
                                           },
                                   },
                           },
@@ -75,20 +69,16 @@ OpenApiSpecConfig makeCatLogOpenApiConfig()
                                       .requestBody =
                                           OpenApiRequestBody{
                                               .required = true,
-                                              .schemaName =
-                                                  "CreateCatRequest",
+                                              .schemaName = "CreateCatRequest",
                                           },
                                       .responses =
                                           {
                                               OpenApiResponse{
                                                   .statusCode = "201",
-                                                  .description =
-                                                      "The created cat.",
+                                                  .description = "The created cat.",
                                                   .schemaName = "Cat",
                                               },
-                                              errorResponse(
-                                                  "400",
-                                                  "The request body was invalid."),
+                                              errorResponse("400", "The request body was invalid."),
                                           },
                                   },
                           },
@@ -104,21 +94,16 @@ OpenApiSpecConfig makeCatLogOpenApiConfig()
                                   {
                                       .summary = "Get a cat by id",
                                       .operationId = "getCatById",
-                                      .parameters =
-                                          {catIdParameter(
-                                              "Unique identifier for a "
-                                              "previously created cat.")},
+                                      .parameters = {catIdParameter("Unique identifier for a "
+                                                                    "previously created cat.")},
                                       .responses =
                                           {
                                               OpenApiResponse{
                                                   .statusCode = "200",
-                                                  .description =
-                                                      "The requested cat.",
+                                                  .description = "The requested cat.",
                                                   .schemaName = "Cat",
                                               },
-                                              errorResponse(
-                                                  "404",
-                                                  "The cat was not found."),
+                                              errorResponse("404", "The cat was not found."),
                                           },
                                   },
                           },
@@ -134,23 +119,17 @@ OpenApiSpecConfig makeCatLogOpenApiConfig()
                                   {
                                       .summary = "List cat status logs",
                                       .operationId = "listCatLogs",
-                                      .parameters =
-                                          {catIdParameter(
-                                              "Unique identifier for the cat "
-                                              "whose logs are being requested.")},
+                                      .parameters = {catIdParameter("Unique identifier for the cat "
+                                                                    "whose logs are being requested.")},
                                       .responses =
                                           {
                                               OpenApiResponse{
                                                   .statusCode = "200",
-                                                  .description =
-                                                      "Status log entries for "
-                                                      "the cat.",
-                                                  .schemaName =
-                                                      "CatLogListResponse",
+                                                  .description = "Status log entries for "
+                                                                 "the cat.",
+                                                  .schemaName = "CatLogListResponse",
                                               },
-                                              errorResponse(
-                                                  "404",
-                                                  "The cat was not found."),
+                                              errorResponse("404", "The cat was not found."),
                                           },
                                   },
                           },
@@ -158,33 +137,24 @@ OpenApiSpecConfig makeCatLogOpenApiConfig()
                               .method = "post",
                               .operation =
                                   {
-                                      .summary =
-                                          "Create a cat status log entry",
+                                      .summary = "Create a cat status log entry",
                                       .operationId = "createCatLogEntry",
-                                      .parameters =
-                                          {catIdParameter(
-                                              "Unique identifier for the cat "
-                                              "receiving the new log entry.")},
+                                      .parameters = {catIdParameter("Unique identifier for the cat "
+                                                                    "receiving the new log entry.")},
                                       .requestBody =
                                           OpenApiRequestBody{
                                               .required = true,
-                                              .schemaName =
-                                                  "CreateCatLogEntryRequest",
+                                              .schemaName = "CreateCatLogEntryRequest",
                                           },
                                       .responses =
                                           {
                                               OpenApiResponse{
                                                   .statusCode = "201",
-                                                  .description =
-                                                      "The created log entry.",
+                                                  .description = "The created log entry.",
                                                   .schemaName = "CatLogEntry",
                                               },
-                                              errorResponse(
-                                                  "400",
-                                                  "The request body was invalid."),
-                                              errorResponse(
-                                                  "404",
-                                                  "The cat was not found."),
+                                              errorResponse("400", "The request body was invalid."),
+                                              errorResponse("404", "The cat was not found."),
                                           },
                                   },
                           },
@@ -260,8 +230,7 @@ void appendBuilderChecks(std::vector<std::string> &errors)
     errors.emplace_back("Did not expect servers for a config without servers.");
   }
 
-  const auto minimalPaths =
-      toObject(minimalDocument.value().at("paths"), "minimal paths");
+  const auto minimalPaths = toObject(minimalDocument.value().at("paths"), "minimal paths");
   if (!minimalPaths)
   {
     errors.emplace_back(minimalPaths.error());
@@ -275,8 +244,7 @@ void appendBuilderChecks(std::vector<std::string> &errors)
     return;
   }
 
-  const auto pingOperation =
-      toObject(pingPath.value().at("get"), "/ping get operation");
+  const auto pingOperation = toObject(pingPath.value().at("get"), "/ping get operation");
   if (!pingOperation)
   {
     errors.emplace_back(pingOperation.error());
@@ -285,24 +253,21 @@ void appendBuilderChecks(std::vector<std::string> &errors)
 
   if (pingOperation.value().count("requestBody") != 0U)
   {
-    errors.emplace_back(
-        "Did not expect requestBody for an operation without one.");
+    errors.emplace_back("Did not expect requestBody for an operation without one.");
   }
 
-  const auto contains =
-      containsSchemaRef(minimalSpec.value(), "#/components/schemas/ErrorResponse");
+  const auto contains = containsSchemaRef(minimalSpec.value(), "#/components/schemas/ErrorResponse");
   if (!contains)
   {
     errors.emplace_back(contains.error());
   }
   else if (!contains.value())
   {
-    errors.emplace_back(
-        "Expected generic builder responses to use component schema refs.");
+    errors.emplace_back("Expected generic builder responses to use component schema refs.");
   }
 }
 
-} // namespace
+}
 
 std::expected<rfl::Generic, std::string> buildOpenApiSpec()
 {
@@ -336,16 +301,14 @@ int runChecks()
         errors.emplace_back("Expected OpenAPI version 3.1.0.");
       }
 
-      const auto components =
-          toObject(document.value().at("components"), "components");
+      const auto components = toObject(document.value().at("components"), "components");
       if (!components)
       {
         errors.emplace_back(components.error());
       }
       else
       {
-        const auto schemas =
-            toObject(components.value().at("schemas"), "schemas");
+        const auto schemas = toObject(components.value().at("schemas"), "schemas");
         if (!schemas)
         {
           errors.emplace_back(schemas.error());
@@ -353,34 +316,25 @@ int runChecks()
         else
         {
           for (const std::string_view name :
-               std::array{"Cat",
-                          "CatSummary",
-                          "CreateCatRequest",
-                          "CatLogEntry",
-                          "CreateCatLogEntryRequest",
-                          "CatListResponse",
-                          "CatLogListResponse",
-                          "ErrorResponse"})
+               std::array{"Cat", "CatSummary", "CreateCatRequest", "CatLogEntry", "CreateCatLogEntryRequest",
+                          "CatListResponse", "CatLogListResponse", "ErrorResponse"})
           {
             if (schemas.value().count(std::string(name)) == 0U)
             {
-              errors.emplace_back("Missing component schema: " +
-                                  std::string(name));
+              errors.emplace_back("Missing component schema: " + std::string(name));
             }
           }
 
           if (schemas.value().count("Cat") != 0U)
           {
-            const auto catSchema =
-                toObject(schemas.value().at("Cat"), "Cat schema");
+            const auto catSchema = toObject(schemas.value().at("Cat"), "Cat schema");
             if (!catSchema)
             {
               errors.emplace_back(catSchema.error());
             }
             else
             {
-              const auto catProperties =
-                  toObject(catSchema.value().at("properties"), "Cat.properties");
+              const auto catProperties = toObject(catSchema.value().at("properties"), "Cat.properties");
               if (!catProperties)
               {
                 errors.emplace_back(catProperties.error());
@@ -397,15 +351,12 @@ int runChecks()
                 }
                 if (catProperties.value().count("ownerEmail") != 0U)
                 {
-                  errors.emplace_back(
-                      "Did not expect Cat.ownerEmail in the schema.");
+                  errors.emplace_back("Did not expect Cat.ownerEmail in the schema.");
                 }
 
                 if (catProperties.value().count("name") != 0U)
                 {
-                  const auto nameSchema =
-                      toObject(catProperties.value().at("name"),
-                               "Cat.properties.name");
+                  const auto nameSchema = toObject(catProperties.value().at("name"), "Cat.properties.name");
                   if (!nameSchema)
                   {
                     errors.emplace_back(nameSchema.error());
@@ -414,13 +365,11 @@ int runChecks()
                   {
                     if (nameSchema.value().count("description") == 0U)
                     {
-                      errors.emplace_back(
-                          "Expected reflect-cpp field descriptions in the Cat schema.");
+                      errors.emplace_back("Expected reflect-cpp field descriptions in the Cat schema.");
                     }
                     if (nameSchema.value().count("minLength") == 0U)
                     {
-                      errors.emplace_back(
-                          "Expected reflect-cpp validation metadata in the Cat schema.");
+                      errors.emplace_back("Expected reflect-cpp validation metadata in the Cat schema.");
                     }
                   }
                 }
@@ -428,16 +377,14 @@ int runChecks()
                 if (catProperties.value().count("dateOfBirth") != 0U)
                 {
                   const auto dateOfBirthSchema =
-                      toObject(catProperties.value().at("dateOfBirth"),
-                               "Cat.properties.dateOfBirth");
+                      toObject(catProperties.value().at("dateOfBirth"), "Cat.properties.dateOfBirth");
                   if (!dateOfBirthSchema)
                   {
                     errors.emplace_back(dateOfBirthSchema.error());
                   }
                   else if (dateOfBirthSchema.value().count("pattern") == 0U)
                   {
-                    errors.emplace_back(
-                        "Expected dateOfBirth to include string/date validation metadata.");
+                    errors.emplace_back("Expected dateOfBirth to include string/date validation metadata.");
                   }
                 }
               }
@@ -446,8 +393,7 @@ int runChecks()
 
           if (schemas.value().count("CatStatus") != 0U)
           {
-            const auto statusSchema =
-                toObject(schemas.value().at("CatStatus"), "CatStatus schema");
+            const auto statusSchema = toObject(schemas.value().at("CatStatus"), "CatStatus schema");
             if (!statusSchema)
             {
               errors.emplace_back(statusSchema.error());
@@ -458,19 +404,16 @@ int runChecks()
             }
             else
             {
-              for (const std::string_view status :
-                   std::array{"sassy", "sleepy", "zoomy", "cute"})
+              for (const std::string_view status : std::array{"sassy", "sleepy", "zoomy", "cute"})
               {
-                const auto contains =
-                    arrayContainsString(statusSchema.value().at("enum"), status);
+                const auto contains = arrayContainsString(statusSchema.value().at("enum"), status);
                 if (!contains)
                 {
                   errors.emplace_back(contains.error());
                 }
                 else if (!contains.value())
                 {
-                  errors.emplace_back("Missing CatStatus enum value: " +
-                                      std::string(status));
+                  errors.emplace_back("Missing CatStatus enum value: " + std::string(status));
                 }
               }
             }
@@ -485,8 +428,7 @@ int runChecks()
       }
       else
       {
-        for (const std::string_view path :
-             std::array{"/cats", "/cats/{catId}", "/cats/{catId}/logs"})
+        for (const std::string_view path : std::array{"/cats", "/cats/{catId}", "/cats/{catId}/logs"})
         {
           if (paths.value().count(std::string(path)) == 0U)
           {
@@ -496,10 +438,8 @@ int runChecks()
       }
 
       for (const std::string_view ref :
-           std::array{"#/components/schemas/CreateCatRequest",
-                      "#/components/schemas/Cat",
-                      "#/components/schemas/CreateCatLogEntryRequest",
-                      "#/components/schemas/CatLogEntry",
+           std::array{"#/components/schemas/CreateCatRequest", "#/components/schemas/Cat",
+                      "#/components/schemas/CreateCatLogEntryRequest", "#/components/schemas/CatLogEntry",
                       "#/components/schemas/CatLogListResponse"})
       {
         const auto contains = containsSchemaRef(spec.value(), std::string(ref));
