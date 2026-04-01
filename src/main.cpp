@@ -1,7 +1,5 @@
 #include <format>
 #include <iostream>
-#include <string>
-#include <string_view>
 
 #include <rfl/json.hpp>
 
@@ -14,15 +12,10 @@ const auto senorDonGato = Cat{
     .dateOfBirth = "1999-08-10",
 };
 
-int main(const int argc, char **const argv)
+int main()
 {
   std::cout << std::format("👽uoıʇɔǝlɟǝɹ🪬") << std::endl;
   std::cout << rfl::json::write(senorDonGato) << std::endl;
-  if (argc > 1 && std::string_view(argv[1]) == "--check")
-  {
-    std::cout << "Running checks..." << std::endl;
-    return runChecks();
-  }
 
   std::cout << "Building open API spec..." << std::endl;
 
