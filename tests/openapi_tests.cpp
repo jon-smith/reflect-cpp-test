@@ -209,8 +209,8 @@ TEST_CASE("buildOpenApiSpec assembles optional sections and component refs", "[o
   const auto requestContent = requireObject(requestBody.at("content"), "request content");
   const auto requestJson = requireObject(requestContent.at("application/json"), "request content type");
   const auto requestSchema = requireObject(requestJson.at("schema"), "request schema");
-  CHECK(requireString(requestSchema.at("$ref"), "request schema ref")
-        == "#/components/schemas/CreateCatLogEntryRequest");
+  CHECK(requireString(requestSchema.at("$ref"), "request schema ref") ==
+        "#/components/schemas/CreateCatLogEntryRequest");
 
   const auto responses = requireObject(postOperation.at("responses"), "responses");
   const auto created = requireObject(responses.at("201"), "created response");
@@ -219,7 +219,8 @@ TEST_CASE("buildOpenApiSpec assembles optional sections and component refs", "[o
   const auto createdSchema = requireObject(createdJson.at("schema"), "created schema");
   CHECK(requireString(createdSchema.at("$ref"), "created schema ref") == "#/components/schemas/CatLogEntry");
 
-  const auto containsRequestRef = containsSchemaRef(configuredSpec.value(), "#/components/schemas/CreateCatLogEntryRequest");
+  const auto containsRequestRef =
+      containsSchemaRef(configuredSpec.value(), "#/components/schemas/CreateCatLogEntryRequest");
   REQUIRE(containsRequestRef.has_value());
   CHECK(containsRequestRef.value());
 
