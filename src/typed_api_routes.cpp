@@ -14,7 +14,8 @@ OpenApiOperation makeOpenApiOperation(const TypedRouteMetadata &metadata, std::o
   };
 }
 
-void writeSerializedJsonResponse(httplib::Response &response, int status, std::string body, const std::string &contentType)
+void writeSerializedJsonResponse(httplib::Response &response, int status, std::string body,
+                                 const std::string &contentType)
 {
   response.status = status;
   response.set_content(std::move(body), contentType);

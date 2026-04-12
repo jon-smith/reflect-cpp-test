@@ -26,7 +26,7 @@ void registerRoute(httplib::Server &server, const ApiRoute &route)
   }
 }
 
-}  // namespace
+} // namespace
 
 void registerCatApiRoutes(httplib::Server &server)
 {

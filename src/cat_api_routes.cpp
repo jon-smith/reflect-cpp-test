@@ -95,9 +95,7 @@ TypedErrorResponseSpec<ErrorResponse> makeErrorSpec(int status, const std::strin
   return TypedErrorResponseSpec<ErrorResponse>{
       .status = status,
       .description = description,
-      .makePayload =
-          [code, message](const std::string &detail)
-      { return makeErrorResponse(code, message, detail); },
+      .makePayload = [code, message](const std::string &detail) { return makeErrorResponse(code, message, detail); },
   };
 }
 
@@ -253,7 +251,7 @@ ApiRoute makeCreateCatLogRoute()
       });
 }
 
-}  // namespace
+} // namespace
 
 std::vector<ApiRoute> makeCatApiRoutes()
 {

@@ -8,12 +8,12 @@
 #include <catch2/catch_test_macros.hpp>
 #include <httplib.h>
 
+#include "cat_api_routes.hpp"
+#include "cat_api_server.hpp"
+#include "cat_api_types.hpp"
 #include "openapi_builder.hpp"
 #include "openapi_demo.hpp"
 #include "typed_api_routes.hpp"
-#include "cat_api_types.hpp"
-#include "cat_api_routes.hpp"
-#include "cat_api_server.hpp"
 
 namespace
 {
@@ -86,15 +86,16 @@ static_assert(!TypedNoRequestHandler<
                        { return CatSummary{.catId = "cat-1", .name = "Mochi", .latestStatus = CatStatus::cute}; }),
               ErrorResponse, TypedResponse<200, Cat>>);
 
-static_assert(
-    TypedRequestHandler<decltype([](const httplib::Request &, const CreateCatRequest &) -> TypedRouteResult<Cat, ErrorResponse>
-                                 { return Cat{.catId = "cat-1", .name = "Mochi", .dateOfBirth = "2020-01-01"}; }),
-                        CreateCatRequest, ErrorResponse, TypedResponse<201, Cat>>);
-
-static_assert(!TypedRequestHandler<
-              decltype([](const httplib::Request &, const CreateCatLogEntryRequest &) -> TypedRouteResult<Cat, ErrorResponse>
+static_assert(TypedRequestHandler<
+              decltype([](const httplib::Request &, const CreateCatRequest &) -> TypedRouteResult<Cat, ErrorResponse>
                        { return Cat{.catId = "cat-1", .name = "Mochi", .dateOfBirth = "2020-01-01"}; }),
               CreateCatRequest, ErrorResponse, TypedResponse<201, Cat>>);
+
+static_assert(
+    !TypedRequestHandler<decltype([](const httplib::Request &,
+                                     const CreateCatLogEntryRequest &) -> TypedRouteResult<Cat, ErrorResponse>
+                                  { return Cat{.catId = "cat-1", .name = "Mochi", .dateOfBirth = "2020-01-01"}; }),
+                         CreateCatRequest, ErrorResponse, TypedResponse<201, Cat>>);
 
 struct SyntheticResponse
 {

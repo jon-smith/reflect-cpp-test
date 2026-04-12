@@ -51,14 +51,12 @@ template <class ErrorT> struct TypedRouteError
 template <class SuccessT, class ErrorT> using TypedRouteResult = std::variant<SuccessT, TypedRouteError<ErrorT>>;
 
 template <class Handler, class ErrorT, class SuccessT>
-concept TypedNoRequestHandler =
-    std::same_as<std::invoke_result_t<Handler, const httplib::Request &>,
-                 TypedRouteResult<typename SuccessT::Payload, ErrorT>>;
+concept TypedNoRequestHandler = std::same_as<std::invoke_result_t<Handler, const httplib::Request &>,
+                                             TypedRouteResult<typename SuccessT::Payload, ErrorT>>;
 
 template <class Handler, class RequestT, class ErrorT, class SuccessT>
-concept TypedRequestHandler =
-    std::same_as<std::invoke_result_t<Handler, const httplib::Request &, const RequestT &>,
-                 TypedRouteResult<typename SuccessT::Payload, ErrorT>>;
+concept TypedRequestHandler = std::same_as<std::invoke_result_t<Handler, const httplib::Request &, const RequestT &>,
+                                           TypedRouteResult<typename SuccessT::Payload, ErrorT>>;
 
 struct TypedRouteMetadata
 {
@@ -180,7 +178,8 @@ ApiRoute makeTypedBodyRoute(const TypedBodyRouteDefinition<RequestT, ErrorT, Suc
       .method = definition.metadata.method,
       .openApiPath = definition.metadata.openApiPath,
       .httplibPattern = definition.metadata.httplibPattern,
-      .operation = makeOpenApiOperation(definition.metadata, OpenApiRequestBody::fromType<RequestT>(definition.requestBodyRequired),
+      .operation = makeOpenApiOperation(definition.metadata,
+                                        OpenApiRequestBody::fromType<RequestT>(definition.requestBodyRequired),
                                         std::move(responses)),
       .schemaRegistrations = std::move(schemaRegistrations),
       .handler =

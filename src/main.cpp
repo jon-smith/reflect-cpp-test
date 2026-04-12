@@ -4,8 +4,8 @@
 
 #include <rfl/json.hpp>
 
-#include "cat_api_types.hpp"
 #include "cat_api_server.hpp"
+#include "cat_api_types.hpp"
 #include "openapi_demo.hpp"
 
 const auto senorDonGato = Cat{

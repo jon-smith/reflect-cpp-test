@@ -77,10 +77,10 @@ struct ErrorResponse
   rfl::Description<"Additional debugging context when available.", std::optional<std::string>> detail;
 };
 
-#define OPENAPI_SCHEMA_TRAITS(TYPE)      \
-  template <> struct OpenApiSchemaTraits<TYPE> \
-  {                                      \
-    static constexpr std::string_view name = #TYPE; \
+#define OPENAPI_SCHEMA_TRAITS(TYPE)                                                                                    \
+  template <> struct OpenApiSchemaTraits<TYPE>                                                                         \
+  {                                                                                                                    \
+    static constexpr std::string_view name = #TYPE;                                                                    \
   }
 
 OPENAPI_SCHEMA_TRAITS(Cat);

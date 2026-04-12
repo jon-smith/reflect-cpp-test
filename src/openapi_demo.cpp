@@ -49,7 +49,8 @@ std::vector<OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations()
 
   for (const auto &route : makeCatApiRoutes())
   {
-    schemaRegistrations.insert(schemaRegistrations.end(), route.schemaRegistrations.begin(), route.schemaRegistrations.end());
+    schemaRegistrations.insert(schemaRegistrations.end(), route.schemaRegistrations.begin(),
+                               route.schemaRegistrations.end());
   }
 
   return schemaRegistrations;
