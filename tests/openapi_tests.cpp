@@ -8,6 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <httplib.h>
 
+#include "api_server_support.hpp"
 #include "cat_api_routes.hpp"
 #include "cat_api_server.hpp"
 #include "cat_api_types.hpp"
@@ -65,6 +66,19 @@ TestServerHandle startTestServer()
 {
   TestServerHandle handle;
   registerCatApiRoutes(*handle.server);
+  handle.port = handle.server->bind_to_any_port("127.0.0.1");
+  REQUIRE(handle.port > 0);
+
+  handle.thread = std::thread([server = handle.server.get()] { server->listen_after_bind(); });
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  return handle;
+}
+
+template <class SetupFn> TestServerHandle startTestServer(SetupFn &&setup)
+{
+  TestServerHandle handle;
+  setup(*handle.server);
   handle.port = handle.server->bind_to_any_port("127.0.0.1");
   REQUIRE(handle.port > 0);
 
@@ -362,6 +376,93 @@ TEST_CASE("Cat API route registry is the shared source of truth", "[openapi][rou
   REQUIRE(routes[1].operation.responses.size() >= 1U);
   CHECK(routes[1].operation.responses.front().schemaName == "Cat");
   CHECK(!routes[1].schemaRegistrations.empty());
+}
+
+TEST_CASE("shared route registration mounts GET and POST ApiRoute handlers", "[server][shared]")
+{
+  const auto serverHandle = startTestServer(
+      [](httplib::Server &server)
+      {
+        registerRoutes(server,
+                       std::vector<ApiRoute>{
+                           ApiRoute{
+                               .method = "get",
+                               .openApiPath = "/synthetic-get",
+                               .httplibPattern = "/synthetic-get",
+                               .handler =
+                                   [](const httplib::Request &, httplib::Response &response)
+                               {
+                                 response.status = 200;
+                                 response.set_content(R"({"ok":"get"})", "application/json");
+                               },
+                           },
+                           ApiRoute{
+                               .method = "post",
+                               .openApiPath = "/synthetic-post",
+                               .httplibPattern = "/synthetic-post",
+                               .handler =
+                                   [](const httplib::Request &request, httplib::Response &response)
+                               {
+                                 response.status = 201;
+                                 response.set_content(request.body, "application/json");
+                               },
+                           },
+                       });
+      });
+
+  httplib::Client client("127.0.0.1", serverHandle.port);
+
+  const auto getResponse = client.Get("/synthetic-get");
+  REQUIRE(getResponse);
+  CHECK(getResponse->status == 200);
+  CHECK(getResponse->body == R"({"ok":"get"})");
+
+  const auto postResponse = client.Post("/synthetic-post", R"({"ok":"post"})", "application/json");
+  REQUIRE(postResponse);
+  CHECK(postResponse->status == 201);
+  CHECK(postResponse->body == R"({"ok":"post"})");
+}
+
+TEST_CASE("shared OpenAPI endpoint registration serves success and generic failure JSON", "[server][shared]")
+{
+  const auto successServer = startTestServer(
+      [](httplib::Server &server)
+      {
+        registerOpenApiJsonEndpoint(server,
+                                    []
+                                    {
+                                      auto spec = makeObject({
+                                          {"openapi", "3.1.0"},
+                                          {"info", makeObject({{"title", "Synthetic API"}, {"version", "0.0.1"}})},
+                                          {"paths", makeObject({})},
+                                      });
+                                      return std::expected<OpenApiJson, std::string>(spec);
+                                    });
+      });
+
+  httplib::Client successClient("127.0.0.1", successServer.port);
+  const auto successResponse = successClient.Get("/openapi.json");
+  REQUIRE(successResponse);
+  CHECK(successResponse->status == 200);
+  const auto servedSpec = requireJsonBody<OpenApiJson>(successResponse->body);
+  const auto servedSpecObject = requireObject(servedSpec, "synthetic served spec");
+  CHECK(requireString(servedSpecObject.at("openapi"), "synthetic served openapi version") == "3.1.0");
+
+  const auto failureServer = startTestServer(
+      [](httplib::Server &server)
+      {
+        registerOpenApiJsonEndpoint(
+            server, [] { return std::unexpected(std::string("synthetic failure")); }, "/synthetic-openapi.json");
+      });
+
+  httplib::Client failureClient("127.0.0.1", failureServer.port);
+  const auto failureResponse = failureClient.Get("/synthetic-openapi.json");
+  REQUIRE(failureResponse);
+  CHECK(failureResponse->status == 500);
+  const auto failureBody = requireObject(requireJsonBody<OpenApiJson>(failureResponse->body), "openapi failure body");
+  CHECK(requireString(failureBody.at("error"), "openapi failure error") == "openapi_generation_failed");
+  CHECK(requireString(failureBody.at("message"), "openapi failure message") == "Failed to build the OpenAPI document.");
+  CHECK(requireString(failureBody.at("detail"), "openapi failure detail") == "synthetic failure");
 }
 
 TEST_CASE("Cat API server exposes OpenAPI and stub routes", "[server]")

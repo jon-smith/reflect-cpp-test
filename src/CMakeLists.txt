@@ -1,4 +1,5 @@
 add_library(reflect_cpp_openapi
+  api_server_support.cpp
   cat_api_routes.cpp
   cat_api_server.cpp
   openapi_builder.cpp
