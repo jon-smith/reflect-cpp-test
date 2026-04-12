@@ -2,16 +2,18 @@
 #include <concepts>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <thread>
 
 #include <catch2/catch_test_macros.hpp>
 #include <httplib.h>
 
-#include "cat_api_routes.hpp"
-#include "cat_api_server.hpp"
-#include "cat_api_types.hpp"
 #include "openapi_builder.hpp"
 #include "openapi_demo.hpp"
+#include "typed_api_routes.hpp"
+#include "cat_api_types.hpp"
+#include "cat_api_routes.hpp"
+#include "cat_api_server.hpp"
 
 namespace
 {
@@ -75,24 +77,49 @@ TestServerHandle startTestServer()
 }
 
 static_assert(
-    TypedNoRequestHandler<decltype([](const httplib::Request &) -> TypedRouteResult<Cat>
+    TypedNoRequestHandler<decltype([](const httplib::Request &) -> TypedRouteResult<Cat, ErrorResponse>
                                    { return Cat{.catId = "cat-1", .name = "Mochi", .dateOfBirth = "2020-01-01"}; }),
-                          TypedResponse<200, Cat>>);
+                          ErrorResponse, TypedResponse<200, Cat>>);
 
 static_assert(!TypedNoRequestHandler<
-              decltype([](const httplib::Request &) -> TypedRouteResult<CatSummary>
+              decltype([](const httplib::Request &) -> TypedRouteResult<CatSummary, ErrorResponse>
                        { return CatSummary{.catId = "cat-1", .name = "Mochi", .latestStatus = CatStatus::cute}; }),
-              TypedResponse<200, Cat>>);
+              ErrorResponse, TypedResponse<200, Cat>>);
 
 static_assert(
-    TypedRequestHandler<decltype([](const httplib::Request &, const CreateCatRequest &) -> TypedRouteResult<Cat>
+    TypedRequestHandler<decltype([](const httplib::Request &, const CreateCatRequest &) -> TypedRouteResult<Cat, ErrorResponse>
                                  { return Cat{.catId = "cat-1", .name = "Mochi", .dateOfBirth = "2020-01-01"}; }),
-                        CreateCatRequest, TypedResponse<201, Cat>>);
+                        CreateCatRequest, ErrorResponse, TypedResponse<201, Cat>>);
 
 static_assert(!TypedRequestHandler<
-              decltype([](const httplib::Request &, const CreateCatLogEntryRequest &) -> TypedRouteResult<Cat>
+              decltype([](const httplib::Request &, const CreateCatLogEntryRequest &) -> TypedRouteResult<Cat, ErrorResponse>
                        { return Cat{.catId = "cat-1", .name = "Mochi", .dateOfBirth = "2020-01-01"}; }),
-              CreateCatRequest, TypedResponse<201, Cat>>);
+              CreateCatRequest, ErrorResponse, TypedResponse<201, Cat>>);
+
+struct SyntheticResponse
+{
+  std::string ok;
+};
+
+struct SyntheticError
+{
+  std::string reason;
+};
+
+template <> struct OpenApiSchemaTraits<SyntheticResponse>
+{
+  static constexpr std::string_view name = "SyntheticResponse";
+};
+
+template <> struct OpenApiSchemaTraits<SyntheticError>
+{
+  static constexpr std::string_view name = "SyntheticError";
+};
+
+static_assert(
+    TypedNoRequestHandler<decltype([](const httplib::Request &) -> TypedRouteResult<SyntheticResponse, SyntheticError>
+                                   { return SyntheticResponse{.ok = "yes"}; }),
+                          SyntheticError, TypedResponse<200, SyntheticResponse>>);
 
 TEST_CASE("registerGeneratedSchemaDocument rewrites nested defs references", "[openapi][builder]")
 {

@@ -3,6 +3,7 @@ add_library(reflect_cpp_openapi
   cat_api_server.cpp
   openapi_builder.cpp
   openapi_demo.cpp
+  typed_api_routes.cpp
 )
 
 target_link_libraries(reflect_cpp_openapi PUBLIC reflectcpp::reflectcpp httplib::httplib)

@@ -12,7 +12,7 @@
 namespace
 {
 
-void registerRoute(httplib::Server &server, const CatApiRoute &route)
+void registerRoute(httplib::Server &server, const ApiRoute &route)
 {
   if (route.method == "get")
   {
