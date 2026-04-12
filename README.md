@@ -22,7 +22,8 @@ out/build/clang-release/src/reflect_cpp_test
 ## OpenAPI Demo
 
 The application now demonstrates how to turn C++ DTOs into an OpenAPI 3.1
-document for a CatLog webserver-style API.
+document for a CatLog webserver-style API, while also carving out a reusable
+core library for future APIs.
 
 This demo uses `rfl::json::to_schema<T>()` to generate JSON Schema for each C++
 type, rewrites those schema references from `#/$defs/...` to
@@ -51,9 +52,25 @@ The component schemas are generated from C++ types such as:
 Cat data now models `dateOfBirth` instead of `ageYears`, and status log entries
 track cat moods like `sassy`, `sleepy`, `zoomy`, and `cute`.
 
-This is intended as a contract-generation example for a future C++ webserver.
-The routes themselves are declared explicitly in C++, while the request and
-response schemas come from `reflect-cpp`.
+This is intended as both:
+
+- a contract-generation example for a future C++ webserver
+- an experiment in building a reusable OpenAPI/route-registration library on
+  top of `reflect-cpp`
+
+The reusable code now lives in `clam`-namespaced modules such as:
+
+- `openapi_builder`
+- `typed_api_routes`
+- `api_server_support`
+
+The current CMake targets are split into:
+
+- `reflect_cpp_openapi_core`: reusable OpenAPI builder, typed route DSL, and
+  shared server helpers
+- `reflect_cpp_openapi_demo`: CatLog demo routes/server/spec wiring built on
+  top of the core library
+- `reflect_cpp_test`: demo executable
 
 ## Run
 
@@ -78,12 +95,16 @@ share the same route registry as the OpenAPI generator.
 ## Verify
 
 The repo validates OpenAPI generation with a focused Catch2 test suite that
-covers schema import/ref rewriting, document assembly, and end-to-end demo
-validation:
+covers both the reusable library layer and the CatLog demo layer:
 
 ```sh
 ctest --test-dir out/build/clang-release --output-on-failure
 ```
+
+The tests are split into:
+
+- `reflect_cpp_openapi_core_tests`
+- `reflect_cpp_openapi_demo_tests`
 
 ## Format
 

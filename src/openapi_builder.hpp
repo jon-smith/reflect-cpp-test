@@ -10,6 +10,9 @@
 #include <rfl.hpp>
 #include <rfl/json.hpp>
 
+namespace clam
+{
+
 using OpenApiJson = rfl::Generic;
 using OpenApiSchemaRegistrar = std::function<std::expected<void, std::string>(OpenApiJson::Object &)>;
 using OpenApiExpectedJsonObject = std::expected<OpenApiJson::Object, std::string>;
@@ -135,3 +138,5 @@ template <class T> OpenApiSchemaRegistrar makeOpenApiSchemaRegistration()
   return [](OpenApiJson::Object &schemas) -> std::expected<void, std::string>
   { return registerGeneratedSchemaDocument(rfl::json::to_schema<T>(), schemas); };
 }
+
+} // namespace clam

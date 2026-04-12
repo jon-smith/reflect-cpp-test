@@ -13,9 +13,9 @@
 
 namespace
 {
-std::vector<OpenApiPathItem> buildOpenApiPaths()
+std::vector<clam::OpenApiPathItem> buildOpenApiPaths()
 {
-  std::vector<OpenApiPathItem> pathItems;
+  std::vector<clam::OpenApiPathItem> pathItems;
   std::unordered_map<std::string, std::size_t> pathIndexes;
 
   for (const auto &route : makeCatApiRoutes())
@@ -24,18 +24,18 @@ std::vector<OpenApiPathItem> buildOpenApiPaths()
     if (it == pathIndexes.end())
     {
       pathIndexes.emplace(route.openApiPath, pathItems.size());
-      pathItems.push_back(OpenApiPathItem{
+      pathItems.push_back(clam::OpenApiPathItem{
           .path = route.openApiPath,
-          .operations = {OpenApiPathOperation{
-              .method = route.method,
+          .operations = {clam::OpenApiPathOperation{
+              .method = std::string(clam::toOpenApiMethod(route.method)),
               .operation = route.operation,
           }},
       });
       continue;
     }
 
-    pathItems[it->second].operations.push_back(OpenApiPathOperation{
-        .method = route.method,
+    pathItems[it->second].operations.push_back(clam::OpenApiPathOperation{
+        .method = std::string(clam::toOpenApiMethod(route.method)),
         .operation = route.operation,
     });
   }
@@ -43,9 +43,9 @@ std::vector<OpenApiPathItem> buildOpenApiPaths()
   return pathItems;
 }
 
-std::vector<OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations()
+std::vector<clam::OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations()
 {
-  std::vector<OpenApiSchemaRegistrar> schemaRegistrations;
+  std::vector<clam::OpenApiSchemaRegistrar> schemaRegistrations;
 
   for (const auto &route : makeCatApiRoutes())
   {
@@ -57,9 +57,9 @@ std::vector<OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations()
 }
 }
 
-OpenApiSpecConfig makeCatLogOpenApiConfig()
+clam::OpenApiSpecConfig makeCatLogOpenApiConfig()
 {
-  return OpenApiSpecConfig{
+  return clam::OpenApiSpecConfig{
       .info =
           {
               .title = "reflect-cpp CatLog API",
@@ -67,7 +67,7 @@ OpenApiSpecConfig makeCatLogOpenApiConfig()
               .description = "OpenAPI 3.1 document assembled from reflect-cpp-generated "
                              "JSON Schema components for a CatLog API.",
           },
-      .servers = {{
+      .servers = {clam::OpenApiServer{
           .url = "http://localhost:8080",
           .description = "Local development server",
       }},
@@ -78,20 +78,25 @@ OpenApiSpecConfig makeCatLogOpenApiConfig()
 
 std::expected<rfl::Generic, std::string> buildOpenApiSpec()
 {
-  return buildOpenApiSpec(makeCatLogOpenApiConfig());
+  return clam::buildOpenApiSpec(makeCatLogOpenApiConfig());
+}
+
+std::expected<rfl::Generic, std::string> buildOpenApiSpec(const clam::OpenApiSpecConfig &config)
+{
+  return clam::buildOpenApiSpec(config);
 }
 
 std::vector<std::string> validateOpenApiDemoSpec(const rfl::Generic &spec)
 {
   std::vector<std::string> errors;
-  const auto document = toObject(spec, "OpenAPI document");
+  const auto document = clam::toObject(spec, "OpenAPI document");
   if (!document)
   {
     errors.emplace_back(document.error());
   }
   else
   {
-    const auto openapi = toString(document.value().at("openapi"), "openapi");
+    const auto openapi = clam::toString(document.value().at("openapi"), "openapi");
     if (!openapi)
     {
       errors.emplace_back(openapi.error());
@@ -101,14 +106,14 @@ std::vector<std::string> validateOpenApiDemoSpec(const rfl::Generic &spec)
       errors.emplace_back("Expected OpenAPI version 3.1.0.");
     }
 
-    const auto components = toObject(document.value().at("components"), "components");
+    const auto components = clam::toObject(document.value().at("components"), "components");
     if (!components)
     {
       errors.emplace_back(components.error());
     }
     else
     {
-      const auto schemas = toObject(components.value().at("schemas"), "schemas");
+      const auto schemas = clam::toObject(components.value().at("schemas"), "schemas");
       if (!schemas)
       {
         errors.emplace_back(schemas.error());
@@ -127,14 +132,14 @@ std::vector<std::string> validateOpenApiDemoSpec(const rfl::Generic &spec)
 
         if (schemas.value().count("Cat") != 0U)
         {
-          const auto catSchema = toObject(schemas.value().at("Cat"), "Cat schema");
+          const auto catSchema = clam::toObject(schemas.value().at("Cat"), "Cat schema");
           if (!catSchema)
           {
             errors.emplace_back(catSchema.error());
           }
           else
           {
-            const auto catProperties = toObject(catSchema.value().at("properties"), "Cat.properties");
+            const auto catProperties = clam::toObject(catSchema.value().at("properties"), "Cat.properties");
             if (!catProperties)
             {
               errors.emplace_back(catProperties.error());
@@ -156,7 +161,7 @@ std::vector<std::string> validateOpenApiDemoSpec(const rfl::Generic &spec)
 
               if (catProperties.value().count("name") != 0U)
               {
-                const auto nameSchema = toObject(catProperties.value().at("name"), "Cat.properties.name");
+                const auto nameSchema = clam::toObject(catProperties.value().at("name"), "Cat.properties.name");
                 if (!nameSchema)
                 {
                   errors.emplace_back(nameSchema.error());
@@ -177,7 +182,7 @@ std::vector<std::string> validateOpenApiDemoSpec(const rfl::Generic &spec)
               if (catProperties.value().count("dateOfBirth") != 0U)
               {
                 const auto dateOfBirthSchema =
-                    toObject(catProperties.value().at("dateOfBirth"), "Cat.properties.dateOfBirth");
+                    clam::toObject(catProperties.value().at("dateOfBirth"), "Cat.properties.dateOfBirth");
                 if (!dateOfBirthSchema)
                 {
                   errors.emplace_back(dateOfBirthSchema.error());
@@ -193,7 +198,7 @@ std::vector<std::string> validateOpenApiDemoSpec(const rfl::Generic &spec)
 
         if (schemas.value().count("CatStatus") != 0U)
         {
-          const auto statusSchema = toObject(schemas.value().at("CatStatus"), "CatStatus schema");
+          const auto statusSchema = clam::toObject(schemas.value().at("CatStatus"), "CatStatus schema");
           if (!statusSchema)
           {
             errors.emplace_back(statusSchema.error());
@@ -206,7 +211,7 @@ std::vector<std::string> validateOpenApiDemoSpec(const rfl::Generic &spec)
           {
             for (const std::string_view status : std::array{"sassy", "sleepy", "zoomy", "cute"})
             {
-              const auto contains = arrayContainsString(statusSchema.value().at("enum"), status);
+              const auto contains = clam::arrayContainsString(statusSchema.value().at("enum"), status);
               if (!contains)
               {
                 errors.emplace_back(contains.error());
@@ -221,7 +226,7 @@ std::vector<std::string> validateOpenApiDemoSpec(const rfl::Generic &spec)
       }
     }
 
-    const auto paths = toObject(document.value().at("paths"), "paths");
+    const auto paths = clam::toObject(document.value().at("paths"), "paths");
     if (!paths)
     {
       errors.emplace_back(paths.error());
@@ -242,7 +247,7 @@ std::vector<std::string> validateOpenApiDemoSpec(const rfl::Generic &spec)
                     "#/components/schemas/CreateCatLogEntryRequest", "#/components/schemas/CatLogEntry",
                     "#/components/schemas/CatLogListResponse"})
     {
-      const auto contains = containsSchemaRef(spec, std::string(ref));
+      const auto contains = clam::containsSchemaRef(spec, std::string(ref));
       if (!contains)
       {
         errors.emplace_back(contains.error());

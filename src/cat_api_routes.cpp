@@ -69,16 +69,16 @@ public:
 
 const auto dataStore = MockDataStore{};
 
-template <class T> using CatRouteResult = TypedRouteResult<T, ErrorResponse>;
+template <class T> using CatRouteResult = clam::TypedRouteResult<T, ErrorResponse>;
 
-OpenApiParameter makeCatIdParameter(const std::string &description)
+clam::OpenApiParameter makeCatIdParameter(const std::string &description)
 {
-  return OpenApiParameter{
+  return clam::OpenApiParameter{
       .name = "catId",
       .in = "path",
       .required = true,
       .description = description,
-      .schema = stringSchema(),
+      .schema = clam::stringSchema(),
   };
 }
 
@@ -91,23 +91,23 @@ ErrorResponse makeErrorResponse(const std::string &code, const std::string &mess
   };
 }
 
-TypedErrorResponseSpec<ErrorResponse> makeErrorSpec(int status, const std::string &description, const std::string &code,
-                                                    const std::string &message)
+clam::TypedErrorResponseSpec<ErrorResponse> makeErrorSpec(int status, const std::string &description,
+                                                          const std::string &code, const std::string &message)
 {
-  return TypedErrorResponseSpec<ErrorResponse>{
+  return clam::TypedErrorResponseSpec<ErrorResponse>{
       .status = status,
       .description = description,
       .makePayload = [code, message](const std::string &detail) { return makeErrorResponse(code, message, detail); },
   };
 }
 
-ApiRoute makeListCatsRoute()
+clam::ApiRoute makeListCatsRoute()
 {
-  return makeTypedGetRoute<ErrorResponse, TypedResponse<200, CatListResponse>>(
+  return clam::makeTypedGetRoute<ErrorResponse, clam::TypedResponse<200, CatListResponse>>(
       {
           .metadata =
               {
-                  .method = "get",
+                  .method = clam::HttpMethod::get,
                   .openApiPath = "/cats",
                   .httplibPattern = "/cats",
                   .summary = "List cats",
@@ -123,13 +123,13 @@ ApiRoute makeListCatsRoute()
       { return CatListResponse{.cats = dataStore.getAllCatSummaries()}; });
 }
 
-ApiRoute makeCreateCatRoute()
+clam::ApiRoute makeCreateCatRoute()
 {
-  return makeTypedBodyRoute<CreateCatRequest, ErrorResponse, TypedResponse<201, Cat>>(
+  return clam::makeTypedBodyRoute<CreateCatRequest, ErrorResponse, clam::TypedResponse<201, Cat>>(
       {
           .metadata =
               {
-                  .method = "post",
+                  .method = clam::HttpMethod::post,
                   .openApiPath = "/cats",
                   .httplibPattern = "/cats",
                   .summary = "Create a cat",
@@ -151,15 +151,15 @@ ApiRoute makeCreateCatRoute()
       });
 }
 
-ApiRoute makeGetCatRoute()
+clam::ApiRoute makeGetCatRoute()
 {
   const auto catNotFound = makeErrorSpec(404, "The cat was not found.", "cat_not_found", "The cat was not found.");
 
-  return makeTypedGetRoute<ErrorResponse, TypedResponse<200, Cat>>(
+  return clam::makeTypedGetRoute<ErrorResponse, clam::TypedResponse<200, Cat>>(
       {
           .metadata =
               {
-                  .method = "get",
+                  .method = clam::HttpMethod::get,
                   .openApiPath = "/cats/{catId}",
                   .httplibPattern = R"(/cats/([^/]+))",
                   .summary = "Get a cat by id",
@@ -175,22 +175,22 @@ ApiRoute makeGetCatRoute()
         const auto cat = dataStore.tryGetCat(catId);
         if (!cat)
         {
-          return makeTypedRouteError(catNotFound, catId);
+          return clam::makeTypedRouteError(catNotFound, catId);
         }
 
         return cat.value();
       });
 }
 
-ApiRoute makeListCatLogsRoute()
+clam::ApiRoute makeListCatLogsRoute()
 {
   const auto catNotFound = makeErrorSpec(404, "The cat was not found.", "cat_not_found", "The cat was not found.");
 
-  return makeTypedGetRoute<ErrorResponse, TypedResponse<200, CatLogListResponse>>(
+  return clam::makeTypedGetRoute<ErrorResponse, clam::TypedResponse<200, CatLogListResponse>>(
       {
           .metadata =
               {
-                  .method = "get",
+                  .method = clam::HttpMethod::get,
                   .openApiPath = "/cats/{catId}/logs",
                   .httplibPattern = R"(/cats/([^/]+)/logs)",
                   .summary = "List cat status logs",
@@ -206,24 +206,24 @@ ApiRoute makeListCatLogsRoute()
         const auto catLog = dataStore.tryGetCatLog(catId);
         if (!catLog)
         {
-          return makeTypedRouteError(catNotFound, catId);
+          return clam::makeTypedRouteError(catNotFound, catId);
         }
 
         return CatLogListResponse{.logs = std::vector<CatLogEntry>{catLog.value()}};
       });
 }
 
-ApiRoute makeCreateCatLogRoute()
+clam::ApiRoute makeCreateCatLogRoute()
 {
   const auto invalidRequest =
       makeErrorSpec(400, "The request body was invalid.", "invalid_request", "The request body was invalid.");
   const auto catNotFound = makeErrorSpec(404, "The cat was not found.", "cat_not_found", "The cat was not found.");
 
-  return makeTypedBodyRoute<CreateCatLogEntryRequest, ErrorResponse, TypedResponse<201, CatLogEntry>>(
+  return clam::makeTypedBodyRoute<CreateCatLogEntryRequest, ErrorResponse, clam::TypedResponse<201, CatLogEntry>>(
       {
           .metadata =
               {
-                  .method = "post",
+                  .method = clam::HttpMethod::post,
                   .openApiPath = "/cats/{catId}/logs",
                   .httplibPattern = R"(/cats/([^/]+)/logs)",
                   .summary = "Create a cat status log entry",
@@ -240,7 +240,7 @@ ApiRoute makeCreateCatLogRoute()
         const auto catId = request.matches[1].str();
         if (!dataStore.tryGetCat(catId))
         {
-          return makeTypedRouteError(catNotFound, catId);
+          return clam::makeTypedRouteError(catNotFound, catId);
         }
 
         return CatLogEntry{
@@ -255,7 +255,7 @@ ApiRoute makeCreateCatLogRoute()
 
 } // namespace
 
-std::vector<ApiRoute> makeCatApiRoutes()
+std::vector<clam::ApiRoute> makeCatApiRoutes()
 {
   return {
       makeListCatsRoute(), makeCreateCatRoute(), makeGetCatRoute(), makeListCatLogsRoute(), makeCreateCatLogRoute(),

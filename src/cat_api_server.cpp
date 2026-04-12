@@ -9,8 +9,8 @@
 
 void registerCatApiRoutes(httplib::Server &server)
 {
-  registerOpenApiJsonEndpoint(server, [] { return buildOpenApiSpec(); });
-  registerRoutes(server, makeCatApiRoutes());
+  clam::registerOpenApiJsonEndpoint(server, [] { return buildOpenApiSpec(); });
+  clam::registerRoutes(server, makeCatApiRoutes());
 }
 
 std::expected<void, std::string> serveCatApi(const CatApiServerOptions &options)

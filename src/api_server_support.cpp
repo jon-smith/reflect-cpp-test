@@ -4,6 +4,9 @@
 
 #include <rfl/json.hpp>
 
+namespace clam
+{
+
 namespace
 {
 
@@ -16,17 +19,17 @@ OpenApiJson makeOpenApiGenerationErrorBody(const std::string &detail)
   });
 }
 
-}  // namespace
+} // namespace
 
 void registerRoute(httplib::Server &server, const ApiRoute &route)
 {
-  if (route.method == "get")
+  if (route.method == HttpMethod::get)
   {
     server.Get(route.httplibPattern, route.handler);
     return;
   }
 
-  if (route.method == "post")
+  if (route.method == HttpMethod::post)
   {
     server.Post(route.httplibPattern, route.handler);
   }
@@ -49,7 +52,8 @@ void registerOpenApiJsonEndpoint(httplib::Server &server, OpenApiSpecBuilder bui
                if (!spec)
                {
                  response.status = 500;
-                 response.set_content(rfl::json::write(makeOpenApiGenerationErrorBody(spec.error())), "application/json");
+                 response.set_content(rfl::json::write(makeOpenApiGenerationErrorBody(spec.error())),
+                                      "application/json");
                  return;
                }
 
@@ -57,3 +61,5 @@ void registerOpenApiJsonEndpoint(httplib::Server &server, OpenApiSpecBuilder bui
                response.set_content(rfl::json::write(spec.value(), rfl::json::pretty), "application/json");
              });
 }
+
+} // namespace clam

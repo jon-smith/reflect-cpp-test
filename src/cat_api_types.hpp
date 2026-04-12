@@ -78,7 +78,7 @@ struct ErrorResponse
 };
 
 #define OPENAPI_SCHEMA_TRAITS(TYPE)                                                                                    \
-  template <> struct OpenApiSchemaTraits<TYPE>                                                                         \
+  template <> struct clam::OpenApiSchemaTraits<TYPE>                                                                   \
   {                                                                                                                    \
     static constexpr std::string_view name = #TYPE;                                                                    \
   }

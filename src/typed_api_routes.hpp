@@ -12,11 +12,20 @@
 
 #include "openapi_builder.hpp"
 
+namespace clam
+{
+
+enum class HttpMethod
+{
+  get,
+  post,
+};
+
 using ApiRouteHandler = std::function<void(const httplib::Request &, httplib::Response &)>;
 
 struct ApiRoute
 {
-  std::string method;
+  HttpMethod method;
   std::string openApiPath;
   std::string httplibPattern;
   OpenApiOperation operation;
@@ -60,7 +69,7 @@ concept TypedRequestHandler = std::same_as<std::invoke_result_t<Handler, const h
 
 struct TypedRouteMetadata
 {
-  std::string method;
+  HttpMethod method;
   std::string openApiPath;
   std::string httplibPattern;
   std::string summary;
@@ -86,6 +95,8 @@ template <class RequestT, class ErrorT, class SuccessResponseT> struct TypedBody
 
 OpenApiOperation makeOpenApiOperation(const TypedRouteMetadata &metadata, std::optional<OpenApiRequestBody> requestBody,
                                       std::vector<OpenApiResponse> responses);
+
+std::string_view toOpenApiMethod(HttpMethod method);
 
 void writeSerializedJsonResponse(httplib::Response &response, int status, std::string body,
                                  const std::string &contentType = "application/json");
@@ -206,3 +217,5 @@ ApiRoute makeTypedBodyRoute(const TypedBodyRouteDefinition<RequestT, ErrorT, Suc
       },
   };
 }
+
+} // namespace clam

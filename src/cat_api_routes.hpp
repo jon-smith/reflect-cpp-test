@@ -5,4 +5,4 @@
 #include "cat_api_types.hpp"
 #include "typed_api_routes.hpp"
 
-std::vector<ApiRoute> makeCatApiRoutes();
+std::vector<clam::ApiRoute> makeCatApiRoutes();
