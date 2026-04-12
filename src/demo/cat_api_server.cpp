@@ -1,11 +1,11 @@
-#include "cat_api_server.hpp"
+#include "demo/cat_api_server.hpp"
 
 #include <expected>
 #include <string>
 
-#include "api_server_support.hpp"
-#include "cat_api_routes.hpp"
-#include "openapi_demo.hpp"
+#include "core/api_server_support.hpp"
+#include "demo/cat_api_routes.hpp"
+#include "demo/openapi_demo.hpp"
 
 void registerCatApiRoutes(httplib::Server &server)
 {

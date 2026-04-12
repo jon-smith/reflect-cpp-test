@@ -6,7 +6,7 @@
 
 #include <rfl.hpp>
 
-#include "openapi_builder.hpp"
+#include "core/openapi_builder.hpp"
 
 using DateString = rfl::Pattern<R"(^\d{4}-\d{2}-\d{2}$)", "Date">;
 using DateTimeString = rfl::Pattern<R"(^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$)", "DateTime">;

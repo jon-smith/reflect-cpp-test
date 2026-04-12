@@ -10,7 +10,7 @@
 
 #include <httplib.h>
 
-#include "openapi_builder.hpp"
+#include "core/openapi_builder.hpp"
 
 namespace clam
 {
@@ -218,4 +218,4 @@ ApiRoute makeTypedBodyRoute(const TypedBodyRouteDefinition<RequestT, ErrorT, Suc
   };
 }
 
-} // namespace clam
+}  // namespace clam

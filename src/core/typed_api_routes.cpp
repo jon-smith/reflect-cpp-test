@@ -1,4 +1,4 @@
-#include "typed_api_routes.hpp"
+#include "core/typed_api_routes.hpp"
 
 #include <utility>
 
@@ -37,4 +37,4 @@ void writeSerializedJsonResponse(httplib::Response &response, int status, std::s
   response.set_content(std::move(body), contentType);
 }
 
-} // namespace clam
+}  // namespace clam

@@ -8,11 +8,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <httplib.h>
 
-#include "cat_api_routes.hpp"
-#include "cat_api_server.hpp"
-#include "cat_api_types.hpp"
-#include "openapi_demo.hpp"
-#include "typed_api_routes.hpp"
+#include "core/typed_api_routes.hpp"
+#include "demo/cat_api_routes.hpp"
+#include "demo/cat_api_server.hpp"
+#include "demo/cat_api_types.hpp"
+#include "demo/openapi_demo.hpp"
 
 namespace
 {

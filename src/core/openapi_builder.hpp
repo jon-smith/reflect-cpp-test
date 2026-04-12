@@ -139,4 +139,4 @@ template <class T> OpenApiSchemaRegistrar makeOpenApiSchemaRegistration()
   { return registerGeneratedSchemaDocument(rfl::json::to_schema<T>(), schemas); };
 }
 
-} // namespace clam
+}  // namespace clam

@@ -8,9 +8,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <httplib.h>
 
-#include "api_server_support.hpp"
-#include "openapi_builder.hpp"
-#include "typed_api_routes.hpp"
+#include "core/api_server_support.hpp"
+#include "core/openapi_builder.hpp"
+#include "core/typed_api_routes.hpp"
 
 namespace
 {

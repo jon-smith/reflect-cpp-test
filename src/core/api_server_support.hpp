@@ -7,8 +7,8 @@
 
 #include <httplib.h>
 
-#include "openapi_builder.hpp"
-#include "typed_api_routes.hpp"
+#include "core/openapi_builder.hpp"
+#include "core/typed_api_routes.hpp"
 
 namespace clam
 {
@@ -22,4 +22,4 @@ void registerRoutes(httplib::Server &server, const std::vector<ApiRoute> &routes
 void registerOpenApiJsonEndpoint(httplib::Server &server, OpenApiSpecBuilder buildSpec,
                                  std::string path = "/openapi.json");
 
-} // namespace clam
+}  // namespace clam

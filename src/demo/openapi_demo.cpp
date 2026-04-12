@@ -1,4 +1,4 @@
-#include "openapi_demo.hpp"
+#include "demo/openapi_demo.hpp"
 
 #include <array>
 #include <cstddef>
@@ -8,8 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "cat_api_routes.hpp"
-#include "cat_api_types.hpp"
+#include "demo/cat_api_routes.hpp"
+#include "demo/cat_api_types.hpp"
 
 namespace
 {
@@ -41,7 +41,7 @@ std::vector<clam::OpenApiPathItem> buildOpenApiPaths()
   }
 
   return pathItems;
-}
+}  // namespace
 
 std::vector<clam::OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations()
 {

@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "openapi_builder.hpp"
+#include "core/openapi_builder.hpp"
 
 clam::OpenApiSpecConfig makeCatLogOpenApiConfig();
 std::expected<rfl::Generic, std::string> buildOpenApiSpec();

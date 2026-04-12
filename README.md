@@ -64,6 +64,11 @@ The reusable code now lives in `clam`-namespaced modules such as:
 - `typed_api_routes`
 - `api_server_support`
 
+The source tree is now organized as:
+
+- `src/core`: reusable library code
+- `src/demo`: CatLog demo code built on top of the core library
+
 The current CMake targets are split into:
 
 - `reflect_cpp_openapi_core`: reusable OpenAPI builder, typed route DSL, and
@@ -105,6 +110,11 @@ The tests are split into:
 
 - `reflect_cpp_openapi_core_tests`
 - `reflect_cpp_openapi_demo_tests`
+
+The test sources live alongside their owning subprojects:
+
+- `src/core/tests`
+- `src/demo/tests`
 
 ## Format
 
