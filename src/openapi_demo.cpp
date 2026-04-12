@@ -42,6 +42,18 @@ std::vector<OpenApiPathItem> buildOpenApiPaths()
 
   return pathItems;
 }
+
+std::vector<OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations()
+{
+  std::vector<OpenApiSchemaRegistrar> schemaRegistrations;
+
+  for (const auto &route : makeCatApiRoutes())
+  {
+    schemaRegistrations.insert(schemaRegistrations.end(), route.schemaRegistrations.begin(), route.schemaRegistrations.end());
+  }
+
+  return schemaRegistrations;
+}
 }
 
 OpenApiSpecConfig makeCatLogOpenApiConfig()
@@ -59,17 +71,7 @@ OpenApiSpecConfig makeCatLogOpenApiConfig()
           .description = "Local development server",
       }},
       .paths = buildOpenApiPaths(),
-      .schemaRegistrations =
-          {
-              makeOpenApiSchemaRegistration<Cat>(),
-              makeOpenApiSchemaRegistration<CatSummary>(),
-              makeOpenApiSchemaRegistration<CreateCatRequest>(),
-              makeOpenApiSchemaRegistration<CatLogEntry>(),
-              makeOpenApiSchemaRegistration<CreateCatLogEntryRequest>(),
-              makeOpenApiSchemaRegistration<CatListResponse>(),
-              makeOpenApiSchemaRegistration<CatLogListResponse>(),
-              makeOpenApiSchemaRegistration<ErrorResponse>(),
-          },
+      .schemaRegistrations = buildOpenApiSchemaRegistrations(),
   };
 }
 

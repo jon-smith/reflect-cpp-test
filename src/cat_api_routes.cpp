@@ -1,14 +1,9 @@
 #include "cat_api_routes.hpp"
 
-#include <expected>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <rfl/json.hpp>
-
-#include "cat_api_types.hpp"
 
 namespace
 {
@@ -94,237 +89,202 @@ ErrorResponse makeErrorResponse(const std::string &code, const std::string &mess
   };
 }
 
-template <class T> std::expected<T, std::string> parseJsonBody(const httplib::Request &request)
-{
-  const auto result = rfl::json::read<T>(request.body);
-  if (!result)
-  {
-    return std::unexpected(result.error().what());
-  }
-  return result.value();
-}
-
-template <class T> void writeJsonResponse(httplib::Response &response, int status, const T &payload)
-{
-  response.status = status;
-  response.set_content(rfl::json::write(payload), "application/json");
-}
-
-void writeErrorResponse(httplib::Response &response, int status, const std::string &code, const std::string &message,
-                        const std::string &detail = "")
-{
-  writeJsonResponse(response, status, makeErrorResponse(code, message, detail));
-}
-
 CatApiRoute makeListCatsRoute()
 {
-  return CatApiRoute{
-      .method = "get",
-      .openApiPath = "/cats",
-      .httplibPattern = "/cats",
-      .operation =
-          {
-              .summary = "List cats",
-              .operationId = "listCats",
-              .responses =
-                  {
-                      OpenApiResponse{
-                          .statusCode = "200",
-                          .description = "A list of cats.",
-                          .schemaName = "CatListResponse",
-                      },
-                      errorResponse("500", "Unexpected server error."),
-                  },
-          },
-      .handler =
-          [](const httplib::Request &, httplib::Response &response)
+  return makeTypedGetRoute<TypedResponse<200, CatListResponse>>(
       {
-        const auto allCats = dataStore.getAllCatSummaries();
-        writeJsonResponse(response, 200, CatListResponse{.cats = allCats});
+          .metadata =
+              {
+                  .method = "get",
+                  .openApiPath = "/cats",
+                  .httplibPattern = "/cats",
+                  .summary = "List cats",
+                  .operationId = "listCats",
+              },
+          .successDescription = "A list of cats.",
+          .errorResponses =
+              {
+                  {
+                      .status = 500,
+                      .description = "Unexpected server error.",
+                      .code = "server_error",
+                      .message = "Unexpected server error.",
+                  },
+              },
       },
-  };
+      [](const httplib::Request &) -> TypedRouteResult<CatListResponse>
+      { return CatListResponse{.cats = dataStore.getAllCatSummaries()}; });
 }
 
 CatApiRoute makeCreateCatRoute()
 {
-  return CatApiRoute{
-      .method = "post",
-      .openApiPath = "/cats",
-      .httplibPattern = "/cats",
-      .operation =
-          {
-              .summary = "Create a cat",
-              .operationId = "createCat",
-              .requestBody =
-                  OpenApiRequestBody{
-                      .required = true,
-                      .schemaName = "CreateCatRequest",
-                  },
-              .responses =
-                  {
-                      OpenApiResponse{
-                          .statusCode = "201",
-                          .description = "The created cat.",
-                          .schemaName = "Cat",
-                      },
-                      errorResponse("400", "The request body was invalid."),
-                  },
-          },
-      .handler =
-          [](const httplib::Request &request, httplib::Response &response)
+  return makeTypedBodyRoute<CreateCatRequest, TypedResponse<201, Cat>>(
       {
-        const auto parsed = parseJsonBody<CreateCatRequest>(request);
-        if (!parsed)
-        {
-          writeErrorResponse(response, 400, "invalid_request", "The request body was invalid.", parsed.error());
-          return;
-        }
-
-        const auto &body = parsed.value();
-        writeJsonResponse(response, 201,
-                          Cat{
-                              .catId = "created-cat",
-                              .name = body.name,
-                              .breed = body.breed,
-                              .dateOfBirth = body.dateOfBirth,
-                              .notes = body.notes,
-                          });
+          .metadata =
+              {
+                  .method = "post",
+                  .openApiPath = "/cats",
+                  .httplibPattern = "/cats",
+                  .summary = "Create a cat",
+                  .operationId = "createCat",
+              },
+          .successDescription = "The created cat.",
+          .parseErrorResponse =
+              {
+                  .status = 400,
+                  .description = "The request body was invalid.",
+                  .code = "invalid_request",
+                  .message = "The request body was invalid.",
+              },
       },
-  };
+      [](const httplib::Request &, const CreateCatRequest &body) -> TypedRouteResult<Cat>
+      {
+        return Cat{
+            .catId = "created-cat",
+            .name = body.name,
+            .breed = body.breed,
+            .dateOfBirth = body.dateOfBirth,
+            .notes = body.notes,
+        };
+      });
 }
 
 CatApiRoute makeGetCatRoute()
 {
-  return CatApiRoute{
-      .method = "get",
-      .openApiPath = "/cats/{catId}",
-      .httplibPattern = R"(/cats/([^/]+))",
-      .operation =
-          {
-              .summary = "Get a cat by id",
-              .operationId = "getCatById",
-              .parameters = {makeCatIdParameter("Unique identifier for a previously created cat.")},
-              .responses =
-                  {
-                      OpenApiResponse{
-                          .statusCode = "200",
-                          .description = "The requested cat.",
-                          .schemaName = "Cat",
-                      },
-                      errorResponse("404", "The cat was not found."),
-                  },
-          },
-      .handler =
-          [](const httplib::Request &request, httplib::Response &response)
+  const TypedErrorResponseSpec catNotFound{
+      .status = 404,
+      .description = "The cat was not found.",
+      .code = "cat_not_found",
+      .message = "The cat was not found.",
+  };
+
+  return makeTypedGetRoute<TypedResponse<200, Cat>>(
+      {
+          .metadata =
+              {
+                  .method = "get",
+                  .openApiPath = "/cats/{catId}",
+                  .httplibPattern = R"(/cats/([^/]+))",
+                  .summary = "Get a cat by id",
+                  .operationId = "getCatById",
+                  .parameters = {makeCatIdParameter("Unique identifier for a previously created cat.")},
+              },
+          .successDescription = "The requested cat.",
+          .errorResponses = {catNotFound},
+      },
+      [catNotFound](const httplib::Request &request) -> TypedRouteResult<Cat>
       {
         const auto catId = request.matches[1].str();
         const auto cat = dataStore.tryGetCat(catId);
         if (!cat)
         {
-          writeErrorResponse(response, 404, "cat_not_found", "The cat was not found.", catId);
-          return;
+          return makeTypedRouteError(catNotFound, catId);
         }
 
-        writeJsonResponse(response, 200, cat.value());
-      },
-  };
+        return cat.value();
+      });
 }
 
 CatApiRoute makeListCatLogsRoute()
 {
-  return CatApiRoute{
-      .method = "get",
-      .openApiPath = "/cats/{catId}/logs",
-      .httplibPattern = R"(/cats/([^/]+)/logs)",
-      .operation =
-          {
-              .summary = "List cat status logs",
-              .operationId = "listCatLogs",
-              .parameters = {makeCatIdParameter("Unique identifier for the cat whose logs are being requested.")},
-              .responses =
-                  {
-                      OpenApiResponse{
-                          .statusCode = "200",
-                          .description = "Status log entries for the cat.",
-                          .schemaName = "CatLogListResponse",
-                      },
-                      errorResponse("404", "The cat was not found."),
-                  },
-          },
-      .handler =
-          [](const httplib::Request &request, httplib::Response &response)
+  const TypedErrorResponseSpec catNotFound{
+      .status = 404,
+      .description = "The cat was not found.",
+      .code = "cat_not_found",
+      .message = "The cat was not found.",
+  };
+
+  return makeTypedGetRoute<TypedResponse<200, CatLogListResponse>>(
+      {
+          .metadata =
+              {
+                  .method = "get",
+                  .openApiPath = "/cats/{catId}/logs",
+                  .httplibPattern = R"(/cats/([^/]+)/logs)",
+                  .summary = "List cat status logs",
+                  .operationId = "listCatLogs",
+                  .parameters = {makeCatIdParameter("Unique identifier for the cat whose logs are being requested.")},
+              },
+          .successDescription = "Status log entries for the cat.",
+          .errorResponses = {catNotFound},
+      },
+      [catNotFound](const httplib::Request &request) -> TypedRouteResult<CatLogListResponse>
       {
         const auto catId = request.matches[1].str();
         const auto catLog = dataStore.tryGetCatLog(catId);
         if (!catLog)
         {
-          writeErrorResponse(response, 404, "cat_not_found", "The cat was not found.", catId);
-          return;
+          return makeTypedRouteError(catNotFound, catId);
         }
 
-        writeJsonResponse(response, 200, CatLogListResponse{.logs = std::vector<CatLogEntry>{catLog.value()}});
-      },
-  };
+        return CatLogListResponse{.logs = std::vector<CatLogEntry>{catLog.value()}};
+      });
 }
 
 CatApiRoute makeCreateCatLogRoute()
 {
-  return CatApiRoute{
-      .method = "post",
-      .openApiPath = "/cats/{catId}/logs",
-      .httplibPattern = R"(/cats/([^/]+)/logs)",
-      .operation =
-          {
-              .summary = "Create a cat status log entry",
-              .operationId = "createCatLogEntry",
-              .parameters = {makeCatIdParameter("Unique identifier for the cat receiving the new log entry.")},
-              .requestBody =
-                  OpenApiRequestBody{
-                      .required = true,
-                      .schemaName = "CreateCatLogEntryRequest",
-                  },
-              .responses =
-                  {
-                      OpenApiResponse{
-                          .statusCode = "201",
-                          .description = "The created log entry.",
-                          .schemaName = "CatLogEntry",
-                      },
-                      errorResponse("400", "The request body was invalid."),
-                      errorResponse("404", "The cat was not found."),
-                  },
-          },
-      .handler =
-          [](const httplib::Request &request, httplib::Response &response)
+  const TypedErrorResponseSpec invalidRequest{
+      .status = 400,
+      .description = "The request body was invalid.",
+      .code = "invalid_request",
+      .message = "The request body was invalid.",
+  };
+  const TypedErrorResponseSpec catNotFound{
+      .status = 404,
+      .description = "The cat was not found.",
+      .code = "cat_not_found",
+      .message = "The cat was not found.",
+  };
+
+  return makeTypedBodyRoute<CreateCatLogEntryRequest, TypedResponse<201, CatLogEntry>>(
+      {
+          .metadata =
+              {
+                  .method = "post",
+                  .openApiPath = "/cats/{catId}/logs",
+                  .httplibPattern = R"(/cats/([^/]+)/logs)",
+                  .summary = "Create a cat status log entry",
+                  .operationId = "createCatLogEntry",
+                  .parameters = {makeCatIdParameter("Unique identifier for the cat receiving the new log entry.")},
+              },
+          .successDescription = "The created log entry.",
+          .parseErrorResponse = invalidRequest,
+          .errorResponses = {catNotFound},
+      },
+      [catNotFound](const httplib::Request &request,
+                    const CreateCatLogEntryRequest &body) -> TypedRouteResult<CatLogEntry>
       {
         const auto catId = request.matches[1].str();
         if (!dataStore.tryGetCat(catId))
         {
-          writeErrorResponse(response, 404, "cat_not_found", "The cat was not found.", catId);
-          return;
+          return makeTypedRouteError(catNotFound, catId);
         }
 
-        const auto parsed = parseJsonBody<CreateCatLogEntryRequest>(request);
-        if (!parsed)
-        {
-          writeErrorResponse(response, 400, "invalid_request", "The request body was invalid.", parsed.error());
-          return;
-        }
-
-        const auto &body = parsed.value();
-        writeJsonResponse(response, 201,
-                          CatLogEntry{
-                              .logId = "created-log",
-                              .catId = catId,
-                              .status = body.status,
-                              .loggedAt = body.loggedAt,
-                              .note = body.note,
-                          });
-      },
-  };
+        return CatLogEntry{
+            .logId = "created-log",
+            .catId = catId,
+            .status = body.status,
+            .loggedAt = body.loggedAt,
+            .note = body.note,
+        };
+      });
 }
 
-} // namespace
+}  // namespace
+
+OpenApiResponse makeTypedErrorOpenApiResponse(const TypedErrorResponseSpec &errorResponse)
+{
+  return OpenApiResponse::fromType<ErrorResponse>(std::to_string(errorResponse.status), errorResponse.description,
+                                                  errorResponse.contentType);
+}
+
+TypedRouteError makeTypedRouteError(const TypedErrorResponseSpec &errorResponse, const std::string &detail)
+{
+  return TypedRouteError{
+      .status = errorResponse.status,
+      .payload = makeErrorResponse(errorResponse.code, errorResponse.message, detail),
+  };
+}
 
 std::vector<CatApiRoute> makeCatApiRoutes()
 {

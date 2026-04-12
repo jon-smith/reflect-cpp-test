@@ -1,4 +1,5 @@
 #include <chrono>
+#include <concepts>
 #include <memory>
 #include <string>
 #include <thread>
@@ -65,14 +66,33 @@ TestServerHandle startTestServer()
   handle.port = handle.server->bind_to_any_port("127.0.0.1");
   REQUIRE(handle.port > 0);
 
-  handle.thread = std::thread([server = handle.server.get()]
-                              { server->listen_after_bind(); });
+  handle.thread = std::thread([server = handle.server.get()] { server->listen_after_bind(); });
 
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   return handle;
 }
 
 }
+
+static_assert(
+    TypedNoRequestHandler<decltype([](const httplib::Request &) -> TypedRouteResult<Cat>
+                                   { return Cat{.catId = "cat-1", .name = "Mochi", .dateOfBirth = "2020-01-01"}; }),
+                          TypedResponse<200, Cat>>);
+
+static_assert(!TypedNoRequestHandler<
+              decltype([](const httplib::Request &) -> TypedRouteResult<CatSummary>
+                       { return CatSummary{.catId = "cat-1", .name = "Mochi", .latestStatus = CatStatus::cute}; }),
+              TypedResponse<200, Cat>>);
+
+static_assert(
+    TypedRequestHandler<decltype([](const httplib::Request &, const CreateCatRequest &) -> TypedRouteResult<Cat>
+                                 { return Cat{.catId = "cat-1", .name = "Mochi", .dateOfBirth = "2020-01-01"}; }),
+                        CreateCatRequest, TypedResponse<201, Cat>>);
+
+static_assert(!TypedRequestHandler<
+              decltype([](const httplib::Request &, const CreateCatLogEntryRequest &) -> TypedRouteResult<Cat>
+                       { return Cat{.catId = "cat-1", .name = "Mochi", .dateOfBirth = "2020-01-01"}; }),
+              CreateCatRequest, TypedResponse<201, Cat>>);
 
 TEST_CASE("registerGeneratedSchemaDocument rewrites nested defs references", "[openapi][builder]")
 {
@@ -308,6 +328,12 @@ TEST_CASE("Cat API route registry is the shared source of truth", "[openapi][rou
 
   CHECK(routes[4].openApiPath == "/cats/{catId}/logs");
   CHECK(routes[4].operation.operationId == "createCatLogEntry");
+
+  REQUIRE(routes[1].operation.requestBody.has_value());
+  CHECK(routes[1].operation.requestBody->schemaName == "CreateCatRequest");
+  REQUIRE(routes[1].operation.responses.size() >= 1U);
+  CHECK(routes[1].operation.responses.front().schemaName == "Cat");
+  CHECK(!routes[1].schemaRegistrations.empty());
 }
 
 TEST_CASE("Cat API server exposes OpenAPI and stub routes", "[server]")
@@ -348,9 +374,8 @@ TEST_CASE("Cat API server exposes OpenAPI and stub routes", "[server]")
   const auto invalidCreateCat = requireJsonBody<ErrorResponse>(invalidCreateCatResponse->body);
   CHECK(invalidCreateCat.code.get() == "invalid_request");
 
-  const auto createLogResponse = client.Post("/cats/senor-don-gato/logs",
-                                             R"({"status":"zoomy","loggedAt":"2024-05-01T10:00:00Z"})",
-                                             "application/json");
+  const auto createLogResponse = client.Post(
+      "/cats/senor-don-gato/logs", R"({"status":"zoomy","loggedAt":"2024-05-01T10:00:00Z"})", "application/json");
   REQUIRE(createLogResponse);
   CHECK(createLogResponse->status == 201);
   const auto createdLog = requireJsonBody<CatLogEntry>(createLogResponse->body);
