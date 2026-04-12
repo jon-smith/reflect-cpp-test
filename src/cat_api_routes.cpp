@@ -69,6 +69,8 @@ public:
 
 const auto dataStore = MockDataStore{};
 
+template <class T> using CatRouteResult = TypedRouteResult<T, ErrorResponse>;
+
 OpenApiParameter makeCatIdParameter(const std::string &description)
 {
   return OpenApiParameter{
