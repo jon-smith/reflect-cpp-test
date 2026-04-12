@@ -65,6 +65,16 @@ out/build/clang-release/src/reflect_cpp_test
 
 The binary prints a pretty-formatted OpenAPI 3.1 JSON document to `stdout`.
 
+Run the demo HTTP server instead:
+
+```sh
+out/build/clang-release/src/reflect_cpp_test --serve
+```
+
+The server listens on `http://localhost:8080`, serves the generated OpenAPI
+document from `GET /openapi.json`, and mounts stub CatLog demo routes that
+share the same route registry as the OpenAPI generator.
+
 ## Verify
 
 The repo validates OpenAPI generation with a focused Catch2 test suite that

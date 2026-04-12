@@ -1,25 +1,47 @@
 #include "openapi_demo.hpp"
 
 #include <array>
+#include <cstddef>
 #include <expected>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
+#include "cat_api_routes.hpp"
 #include "cat_api_types.hpp"
 
 namespace
 {
-
-OpenApiParameter catIdParameter(const std::string &description)
+std::vector<OpenApiPathItem> buildOpenApiPaths()
 {
-  return OpenApiParameter{
-      .name = "catId",
-      .in = "path",
-      .required = true,
-      .description = description,
-      .schema = stringSchema(),
-  };
+  std::vector<OpenApiPathItem> pathItems;
+  std::unordered_map<std::string, std::size_t> pathIndexes;
+
+  for (const auto &route : makeCatApiRoutes())
+  {
+    const auto it = pathIndexes.find(route.openApiPath);
+    if (it == pathIndexes.end())
+    {
+      pathIndexes.emplace(route.openApiPath, pathItems.size());
+      pathItems.push_back(OpenApiPathItem{
+          .path = route.openApiPath,
+          .operations = {OpenApiPathOperation{
+              .method = route.method,
+              .operation = route.operation,
+          }},
+      });
+      continue;
+    }
+
+    pathItems[it->second].operations.push_back(OpenApiPathOperation{
+        .method = route.method,
+        .operation = route.operation,
+    });
+  }
+
+  return pathItems;
+}
 }
 
 OpenApiSpecConfig makeCatLogOpenApiConfig()
@@ -36,130 +58,7 @@ OpenApiSpecConfig makeCatLogOpenApiConfig()
           .url = "http://localhost:8080",
           .description = "Local development server",
       }},
-      .paths =
-          {
-              OpenApiPathItem{
-                  .path = "/cats",
-                  .operations =
-                      {
-                          OpenApiPathOperation{
-                              .method = "get",
-                              .operation =
-                                  {
-                                      .summary = "List cats",
-                                      .operationId = "listCats",
-                                      .responses =
-                                          {
-                                              OpenApiResponse{
-                                                  .statusCode = "200",
-                                                  .description = "A list of cats.",
-                                                  .schemaName = "CatListResponse",
-                                              },
-                                              errorResponse("500", "Unexpected server error."),
-                                          },
-                                  },
-                          },
-                          OpenApiPathOperation{
-                              .method = "post",
-                              .operation =
-                                  {
-                                      .summary = "Create a cat",
-                                      .operationId = "createCat",
-                                      .requestBody =
-                                          OpenApiRequestBody{
-                                              .required = true,
-                                              .schemaName = "CreateCatRequest",
-                                          },
-                                      .responses =
-                                          {
-                                              OpenApiResponse{
-                                                  .statusCode = "201",
-                                                  .description = "The created cat.",
-                                                  .schemaName = "Cat",
-                                              },
-                                              errorResponse("400", "The request body was invalid."),
-                                          },
-                                  },
-                          },
-                      },
-              },
-              OpenApiPathItem{
-                  .path = "/cats/{catId}",
-                  .operations =
-                      {
-                          OpenApiPathOperation{
-                              .method = "get",
-                              .operation =
-                                  {
-                                      .summary = "Get a cat by id",
-                                      .operationId = "getCatById",
-                                      .parameters = {catIdParameter("Unique identifier for a "
-                                                                    "previously created cat.")},
-                                      .responses =
-                                          {
-                                              OpenApiResponse{
-                                                  .statusCode = "200",
-                                                  .description = "The requested cat.",
-                                                  .schemaName = "Cat",
-                                              },
-                                              errorResponse("404", "The cat was not found."),
-                                          },
-                                  },
-                          },
-                      },
-              },
-              OpenApiPathItem{
-                  .path = "/cats/{catId}/logs",
-                  .operations =
-                      {
-                          OpenApiPathOperation{
-                              .method = "get",
-                              .operation =
-                                  {
-                                      .summary = "List cat status logs",
-                                      .operationId = "listCatLogs",
-                                      .parameters = {catIdParameter("Unique identifier for the cat "
-                                                                    "whose logs are being requested.")},
-                                      .responses =
-                                          {
-                                              OpenApiResponse{
-                                                  .statusCode = "200",
-                                                  .description = "Status log entries for "
-                                                                 "the cat.",
-                                                  .schemaName = "CatLogListResponse",
-                                              },
-                                              errorResponse("404", "The cat was not found."),
-                                          },
-                                  },
-                          },
-                          OpenApiPathOperation{
-                              .method = "post",
-                              .operation =
-                                  {
-                                      .summary = "Create a cat status log entry",
-                                      .operationId = "createCatLogEntry",
-                                      .parameters = {catIdParameter("Unique identifier for the cat "
-                                                                    "receiving the new log entry.")},
-                                      .requestBody =
-                                          OpenApiRequestBody{
-                                              .required = true,
-                                              .schemaName = "CreateCatLogEntryRequest",
-                                          },
-                                      .responses =
-                                          {
-                                              OpenApiResponse{
-                                                  .statusCode = "201",
-                                                  .description = "The created log entry.",
-                                                  .schemaName = "CatLogEntry",
-                                              },
-                                              errorResponse("400", "The request body was invalid."),
-                                              errorResponse("404", "The cat was not found."),
-                                          },
-                                  },
-                          },
-                      },
-              },
-          },
+      .paths = buildOpenApiPaths(),
       .schemaRegistrations =
           {
               makeOpenApiSchemaRegistration<Cat>(),
@@ -172,8 +71,6 @@ OpenApiSpecConfig makeCatLogOpenApiConfig()
               makeOpenApiSchemaRegistration<ErrorResponse>(),
           },
   };
-}
-
 }
 
 std::expected<rfl::Generic, std::string> buildOpenApiSpec()

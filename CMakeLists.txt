@@ -17,6 +17,7 @@ set(CMAKE_CXX_STANDARD 23)
 include(CTest)
 
 find_package(reflectcpp REQUIRED)
+find_package(httplib CONFIG REQUIRED)
 
 if(BUILD_TESTING)
   find_package(Catch2 3 CONFIG REQUIRED)
