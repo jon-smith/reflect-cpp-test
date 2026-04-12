@@ -13,9 +13,68 @@
 namespace
 {
 
-constexpr auto kKnownCatId = "senor-don-gato";
+class MockDataStore
+{
+  static constexpr std::string MOCK_DB_CAT_ID = "senor-don-gato";
 
-OpenApiParameter catIdParameter(const std::string &description)
+  const CatSummary MockCatSummary = {
+      .catId = std::string(MOCK_DB_CAT_ID),
+      .name = "Senor Don Gato",
+      .latestStatus = CatStatus::cute,
+  };
+
+public:
+  std::vector<CatSummary> getAllCatSummaries() const
+  {
+    return std::vector<CatSummary>{MockCatSummary};
+  }
+
+  std::optional<CatSummary> tryGetCatSummary(const std::string &catId) const
+  {
+    if (catId != MOCK_DB_CAT_ID)
+    {
+      return std::nullopt;
+    }
+
+    return MockCatSummary;
+  }
+
+  std::optional<Cat> tryGetCat(const std::string &catId) const
+  {
+    if (catId != MOCK_DB_CAT_ID)
+    {
+      return std::nullopt;
+    }
+
+    return Cat{
+        .catId = std::string(MOCK_DB_CAT_ID),
+        .name = "Senor Don Gato",
+        .breed = "Siamese",
+        .dateOfBirth = "1999-08-10",
+        .notes = "Resident demo cat.",
+    };
+  }
+
+  std::optional<CatLogEntry> tryGetCatLog(const std::string &catId) const
+  {
+    if (catId != MOCK_DB_CAT_ID)
+    {
+      return std::nullopt;
+    }
+
+    return CatLogEntry{
+        .logId = "log-1",
+        .catId = std::string(MOCK_DB_CAT_ID),
+        .status = CatStatus::cute,
+        .loggedAt = "2024-05-01T09:30:00Z",
+        .note = "Holding the API together with pure charisma.",
+    };
+  }
+};
+
+const auto dataStore = MockDataStore{};
+
+OpenApiParameter makeCatIdParameter(const std::string &description)
 {
   return OpenApiParameter{
       .name = "catId",
@@ -26,37 +85,6 @@ OpenApiParameter catIdParameter(const std::string &description)
   };
 }
 
-CatSummary makeKnownCatSummary()
-{
-  return CatSummary{
-      .catId = std::string(kKnownCatId),
-      .name = "Senor Don Gato",
-      .latestStatus = CatStatus::cute,
-  };
-}
-
-Cat makeKnownCat()
-{
-  return Cat{
-      .catId = std::string(kKnownCatId),
-      .name = "Senor Don Gato",
-      .breed = "Siamese",
-      .dateOfBirth = "1999-08-10",
-      .notes = "Resident demo cat.",
-  };
-}
-
-CatLogEntry makeKnownLog()
-{
-  return CatLogEntry{
-      .logId = "log-1",
-      .catId = std::string(kKnownCatId),
-      .status = CatStatus::cute,
-      .loggedAt = "2024-05-01T09:30:00Z",
-      .note = "Holding the API together with pure charisma.",
-  };
-}
-
 ErrorResponse makeErrorResponse(const std::string &code, const std::string &message, const std::string &detail = "")
 {
   return ErrorResponse{
@@ -64,11 +92,6 @@ ErrorResponse makeErrorResponse(const std::string &code, const std::string &mess
       .message = message,
       .detail = detail.empty() ? std::nullopt : std::optional<std::string>(detail),
   };
-}
-
-bool isKnownCatId(const std::string &catId)
-{
-  return catId == kKnownCatId;
 }
 
 template <class T> std::expected<T, std::string> parseJsonBody(const httplib::Request &request)
@@ -87,10 +110,7 @@ template <class T> void writeJsonResponse(httplib::Response &response, int statu
   response.set_content(rfl::json::write(payload), "application/json");
 }
 
-void writeErrorResponse(httplib::Response &response,
-                        int status,
-                        const std::string &code,
-                        const std::string &message,
+void writeErrorResponse(httplib::Response &response, int status, const std::string &code, const std::string &message,
                         const std::string &detail = "")
 {
   writeJsonResponse(response, status, makeErrorResponse(code, message, detail));
@@ -119,7 +139,8 @@ CatApiRoute makeListCatsRoute()
       .handler =
           [](const httplib::Request &, httplib::Response &response)
       {
-        writeJsonResponse(response, 200, CatListResponse{.cats = std::vector<CatSummary>{makeKnownCatSummary()}});
+        const auto allCats = dataStore.getAllCatSummaries();
+        writeJsonResponse(response, 200, CatListResponse{.cats = allCats});
       },
   };
 }
@@ -160,8 +181,7 @@ CatApiRoute makeCreateCatRoute()
         }
 
         const auto &body = parsed.value();
-        writeJsonResponse(response,
-                          201,
+        writeJsonResponse(response, 201,
                           Cat{
                               .catId = "created-cat",
                               .name = body.name,
@@ -183,7 +203,7 @@ CatApiRoute makeGetCatRoute()
           {
               .summary = "Get a cat by id",
               .operationId = "getCatById",
-              .parameters = {catIdParameter("Unique identifier for a previously created cat.")},
+              .parameters = {makeCatIdParameter("Unique identifier for a previously created cat.")},
               .responses =
                   {
                       OpenApiResponse{
@@ -198,13 +218,14 @@ CatApiRoute makeGetCatRoute()
           [](const httplib::Request &request, httplib::Response &response)
       {
         const auto catId = request.matches[1].str();
-        if (!isKnownCatId(catId))
+        const auto cat = dataStore.tryGetCat(catId);
+        if (!cat)
         {
           writeErrorResponse(response, 404, "cat_not_found", "The cat was not found.", catId);
           return;
         }
 
-        writeJsonResponse(response, 200, makeKnownCat());
+        writeJsonResponse(response, 200, cat.value());
       },
   };
 }
@@ -219,7 +240,7 @@ CatApiRoute makeListCatLogsRoute()
           {
               .summary = "List cat status logs",
               .operationId = "listCatLogs",
-              .parameters = {catIdParameter("Unique identifier for the cat whose logs are being requested.")},
+              .parameters = {makeCatIdParameter("Unique identifier for the cat whose logs are being requested.")},
               .responses =
                   {
                       OpenApiResponse{
@@ -234,13 +255,14 @@ CatApiRoute makeListCatLogsRoute()
           [](const httplib::Request &request, httplib::Response &response)
       {
         const auto catId = request.matches[1].str();
-        if (!isKnownCatId(catId))
+        const auto catLog = dataStore.tryGetCatLog(catId);
+        if (!catLog)
         {
           writeErrorResponse(response, 404, "cat_not_found", "The cat was not found.", catId);
           return;
         }
 
-        writeJsonResponse(response, 200, CatLogListResponse{.logs = std::vector<CatLogEntry>{makeKnownLog()}});
+        writeJsonResponse(response, 200, CatLogListResponse{.logs = std::vector<CatLogEntry>{catLog.value()}});
       },
   };
 }
@@ -255,7 +277,7 @@ CatApiRoute makeCreateCatLogRoute()
           {
               .summary = "Create a cat status log entry",
               .operationId = "createCatLogEntry",
-              .parameters = {catIdParameter("Unique identifier for the cat receiving the new log entry.")},
+              .parameters = {makeCatIdParameter("Unique identifier for the cat receiving the new log entry.")},
               .requestBody =
                   OpenApiRequestBody{
                       .required = true,
@@ -276,7 +298,7 @@ CatApiRoute makeCreateCatLogRoute()
           [](const httplib::Request &request, httplib::Response &response)
       {
         const auto catId = request.matches[1].str();
-        if (!isKnownCatId(catId))
+        if (!dataStore.tryGetCat(catId))
         {
           writeErrorResponse(response, 404, "cat_not_found", "The cat was not found.", catId);
           return;
@@ -290,8 +312,7 @@ CatApiRoute makeCreateCatLogRoute()
         }
 
         const auto &body = parsed.value();
-        writeJsonResponse(response,
-                          201,
+        writeJsonResponse(response, 201,
                           CatLogEntry{
                               .logId = "created-log",
                               .catId = catId,
@@ -303,15 +324,11 @@ CatApiRoute makeCreateCatLogRoute()
   };
 }
 
-}  // namespace
+} // namespace
 
 std::vector<CatApiRoute> makeCatApiRoutes()
 {
   return {
-      makeListCatsRoute(),
-      makeCreateCatRoute(),
-      makeGetCatRoute(),
-      makeListCatLogsRoute(),
-      makeCreateCatLogRoute(),
+      makeListCatsRoute(), makeCreateCatRoute(), makeGetCatRoute(), makeListCatLogsRoute(), makeCreateCatLogRoute(),
   };
 }
