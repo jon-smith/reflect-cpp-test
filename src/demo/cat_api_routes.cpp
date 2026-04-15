@@ -253,7 +253,7 @@ clam::ApiRoute makeCreateCatLogRoute()
       });
 }
 
-} // namespace
+}
 
 std::vector<clam::ApiRoute> makeCatApiRoutes()
 {

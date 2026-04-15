@@ -71,7 +71,7 @@ TestServerHandle startTestServer()
   return handle;
 }
 
-} // namespace
+}
 
 static_assert(clam::TypedNoRequestHandler<
               decltype([](const httplib::Request &) -> clam::TypedRouteResult<Cat, ErrorResponse>

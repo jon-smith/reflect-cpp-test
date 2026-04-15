@@ -70,7 +70,7 @@ template <class SetupFn> TestServerHandle startTestServer(SetupFn &&setup)
   return handle;
 }
 
-} // namespace
+}
 
 struct SyntheticResponse
 {
@@ -93,7 +93,7 @@ template <> struct OpenApiSchemaTraits<SyntheticError>
 {
   static constexpr std::string_view name = "SyntheticError";
 };
-} // namespace clam
+}
 
 static_assert(clam::TypedNoRequestHandler<
               decltype([](const httplib::Request &) -> clam::TypedRouteResult<SyntheticResponse, SyntheticError>

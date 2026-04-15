@@ -157,7 +157,7 @@ Json makePathsObject(const std::vector<OpenApiPathItem> &paths)
   return pathObjects;
 }
 
-} // namespace
+}
 
 OpenApiJson makeObject(const std::initializer_list<std::pair<std::string, OpenApiJson>> fields)
 {
@@ -351,4 +351,4 @@ std::expected<OpenApiJson, std::string> buildOpenApiSpec(const OpenApiSpecConfig
   return document;
 }
 
-} // namespace clam
+}
