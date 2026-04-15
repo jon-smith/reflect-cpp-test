@@ -9,53 +9,9 @@
 #include <vector>
 
 #include "demo/cat_api_routes.hpp"
-#include "demo/cat_api_types.hpp"
 
 namespace
 {
-
-std::vector<clam::OpenApiPathItem> buildOpenApiPaths(const std::vector<clam::ApiRoute> &apiRoutes)
-{
-  std::vector<clam::OpenApiPathItem> pathItems;
-  std::unordered_map<std::string, std::size_t> pathIndexes;
-
-  for (const auto &route : apiRoutes)
-  {
-    const auto it = pathIndexes.find(route.openApiPath);
-    if (it == pathIndexes.end())
-    {
-      pathIndexes.emplace(route.openApiPath, pathItems.size());
-      pathItems.push_back(clam::OpenApiPathItem{
-          .path = route.openApiPath,
-          .operations = {clam::OpenApiPathOperation{
-              .method = std::string(clam::toOpenApiMethod(route.method)),
-              .operation = route.operation,
-          }},
-      });
-      continue;
-    }
-
-    pathItems[it->second].operations.push_back(clam::OpenApiPathOperation{
-        .method = std::string(clam::toOpenApiMethod(route.method)),
-        .operation = route.operation,
-    });
-  }
-
-  return pathItems;
-}
-
-std::vector<clam::OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations(const std::vector<clam::ApiRoute> &apiRoutes)
-{
-  std::vector<clam::OpenApiSchemaRegistrar> schemaRegistrations;
-
-  for (const auto &route : apiRoutes)
-  {
-    schemaRegistrations.insert(schemaRegistrations.end(), route.schemaRegistrations.begin(),
-                               route.schemaRegistrations.end());
-  }
-
-  return schemaRegistrations;
-}
 
 clam::OpenApiSpecConfig makeCatLogOpenApiConfig()
 {

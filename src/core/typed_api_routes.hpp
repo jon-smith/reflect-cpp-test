@@ -218,4 +218,8 @@ ApiRoute makeTypedBodyRoute(const TypedBodyRouteDefinition<RequestT, ErrorT, Suc
   };
 }
 
+std::vector<clam::OpenApiPathItem> buildOpenApiPaths(const std::vector<clam::ApiRoute> &apiRoutes);
+
+std::vector<clam::OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations(const std::vector<clam::ApiRoute> &apiRoutes);
+
 }
