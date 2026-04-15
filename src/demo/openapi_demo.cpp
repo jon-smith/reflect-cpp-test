@@ -14,12 +14,12 @@
 namespace
 {
 
-std::vector<clam::OpenApiPathItem> buildOpenApiPaths()
+std::vector<clam::OpenApiPathItem> buildOpenApiPaths(const std::vector<clam::ApiRoute> &apiRoutes)
 {
   std::vector<clam::OpenApiPathItem> pathItems;
   std::unordered_map<std::string, std::size_t> pathIndexes;
 
-  for (const auto &route : makeCatApiRoutes())
+  for (const auto &route : apiRoutes)
   {
     const auto it = pathIndexes.find(route.openApiPath);
     if (it == pathIndexes.end())
@@ -44,11 +44,11 @@ std::vector<clam::OpenApiPathItem> buildOpenApiPaths()
   return pathItems;
 }
 
-std::vector<clam::OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations()
+std::vector<clam::OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations(const std::vector<clam::ApiRoute> &apiRoutes)
 {
   std::vector<clam::OpenApiSchemaRegistrar> schemaRegistrations;
 
-  for (const auto &route : makeCatApiRoutes())
+  for (const auto &route : apiRoutes)
   {
     schemaRegistrations.insert(schemaRegistrations.end(), route.schemaRegistrations.begin(),
                                route.schemaRegistrations.end());
@@ -59,6 +59,8 @@ std::vector<clam::OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations()
 
 clam::OpenApiSpecConfig makeCatLogOpenApiConfig()
 {
+  const auto apiRoutes = makeCatApiRoutes();
+
   return clam::OpenApiSpecConfig{
       .info =
           {
@@ -71,8 +73,8 @@ clam::OpenApiSpecConfig makeCatLogOpenApiConfig()
           .url = "http://localhost:8080",
           .description = "Local development server",
       }},
-      .paths = buildOpenApiPaths(),
-      .schemaRegistrations = buildOpenApiSchemaRegistrations(),
+      .paths = buildOpenApiPaths(apiRoutes),
+      .schemaRegistrations = buildOpenApiSchemaRegistrations(apiRoutes),
   };
 }
 }
