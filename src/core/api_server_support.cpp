@@ -19,7 +19,7 @@ OpenApiJson makeOpenApiGenerationErrorBody(const std::string &detail)
   });
 }
 
-}  // namespace
+} // namespace
 
 void registerRoute(httplib::Server &server, const ApiRoute &route)
 {
@@ -62,4 +62,4 @@ void registerOpenApiJsonEndpoint(httplib::Server &server, OpenApiSpecBuilder bui
              });
 }
 
-}  // namespace clam
+} // namespace clam

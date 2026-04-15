@@ -70,7 +70,7 @@ template <class SetupFn> TestServerHandle startTestServer(SetupFn &&setup)
   return handle;
 }
 
-}  // namespace
+} // namespace
 
 struct SyntheticResponse
 {
@@ -93,12 +93,12 @@ template <> struct OpenApiSchemaTraits<SyntheticError>
 {
   static constexpr std::string_view name = "SyntheticError";
 };
-}  // namespace clam
+} // namespace clam
 
-static_assert(
-    clam::TypedNoRequestHandler<decltype([](const httplib::Request &) -> clam::TypedRouteResult<SyntheticResponse, SyntheticError>
-                                         { return SyntheticResponse{.ok = "yes"}; }),
-                                SyntheticError, clam::TypedResponse<200, SyntheticResponse>>);
+static_assert(clam::TypedNoRequestHandler<
+              decltype([](const httplib::Request &) -> clam::TypedRouteResult<SyntheticResponse, SyntheticError>
+                       { return SyntheticResponse{.ok = "yes"}; }),
+              SyntheticError, clam::TypedResponse<200, SyntheticResponse>>);
 
 TEST_CASE("registerGeneratedSchemaDocument rewrites nested defs references", "[openapi][builder][core]")
 {
@@ -180,36 +180,35 @@ TEST_CASE("buildOpenApiSpec assembles optional sections and component refs", "[o
 
 TEST_CASE("shared route registration mounts GET and POST ApiRoute handlers", "[server][shared][core]")
 {
-  const auto serverHandle = startTestServer([](httplib::Server &server)
-                                            {
-                                              clam::registerRoutes(server, std::vector<clam::ApiRoute>{
-                                                                              clam::ApiRoute{
-                                                                                  .method = clam::HttpMethod::get,
-                                                                                  .openApiPath = "/synthetic-get",
-                                                                                  .httplibPattern = "/synthetic-get",
-                                                                                  .handler =
-                                                                                      [](const httplib::Request &,
-                                                                                         httplib::Response &response)
-                                                                                  {
-                                                                                    response.status = 200;
-                                                                                    response.set_content(R"({"ok":"get"})",
-                                                                                                         "application/json");
-                                                                                  },
-                                                                              },
-                                                                              clam::ApiRoute{
-                                                                                  .method = clam::HttpMethod::post,
-                                                                                  .openApiPath = "/synthetic-post",
-                                                                                  .httplibPattern = "/synthetic-post",
-                                                                                  .handler =
-                                                                                      [](const httplib::Request &request,
-                                                                                         httplib::Response &response)
-                                                                                  {
-                                                                                    response.status = 201;
-                                                                                    response.set_content(request.body,
-                                                                                                         "application/json");
-                                                                                  },
-                                                                              },
-                                                                          }); });
+  const auto serverHandle = startTestServer(
+      [](httplib::Server &server)
+      {
+        clam::registerRoutes(server,
+                             std::vector<clam::ApiRoute>{
+                                 clam::ApiRoute{
+                                     .method = clam::HttpMethod::get,
+                                     .openApiPath = "/synthetic-get",
+                                     .httplibPattern = "/synthetic-get",
+                                     .handler =
+                                         [](const httplib::Request &, httplib::Response &response)
+                                     {
+                                       response.status = 200;
+                                       response.set_content(R"({"ok":"get"})", "application/json");
+                                     },
+                                 },
+                                 clam::ApiRoute{
+                                     .method = clam::HttpMethod::post,
+                                     .openApiPath = "/synthetic-post",
+                                     .httplibPattern = "/synthetic-post",
+                                     .handler =
+                                         [](const httplib::Request &request, httplib::Response &response)
+                                     {
+                                       response.status = 201;
+                                       response.set_content(request.body, "application/json");
+                                     },
+                                 },
+                             });
+      });
 
   httplib::Client client("127.0.0.1", serverHandle.port);
   const auto getResponse = client.Get("/synthetic-get");
@@ -223,33 +222,32 @@ TEST_CASE("shared route registration mounts GET and POST ApiRoute handlers", "[s
 
 TEST_CASE("shared OpenAPI endpoint registration serves success and generic failure JSON", "[server][shared][core]")
 {
-  const auto successServer = startTestServer([](httplib::Server &server)
-                                             {
-                                               clam::registerOpenApiJsonEndpoint(server,
-                                                                                []
-                                                                                {
-                                                                                  return std::expected<clam::OpenApiJson, std::string>(
-                                                                                      clam::makeObject({
-                                                                                          {"openapi", "3.1.0"},
-                                                                                          {"info", clam::makeObject({{"title", "Synthetic API"},
-                                                                                                                     {"version", "0.0.1"}})},
-                                                                                          {"paths", clam::makeObject({})},
-                                                                                      }));
-                                                                                });
-                                             });
+  const auto successServer = startTestServer(
+      [](httplib::Server &server)
+      {
+        clam::registerOpenApiJsonEndpoint(
+            server,
+            []
+            {
+              return std::expected<clam::OpenApiJson, std::string>(clam::makeObject({
+                  {"openapi", "3.1.0"},
+                  {"info", clam::makeObject({{"title", "Synthetic API"}, {"version", "0.0.1"}})},
+                  {"paths", clam::makeObject({})},
+              }));
+            });
+      });
 
   httplib::Client successClient("127.0.0.1", successServer.port);
   const auto successResponse = successClient.Get("/openapi.json");
   REQUIRE(successResponse);
   CHECK(successResponse->status == 200);
 
-  const auto failureServer = startTestServer([](httplib::Server &server)
-                                             {
-                                               clam::registerOpenApiJsonEndpoint(server,
-                                                                                []
-                                                                                { return std::unexpected(std::string("synthetic failure")); },
-                                                                                "/synthetic-openapi.json");
-                                             });
+  const auto failureServer = startTestServer(
+      [](httplib::Server &server)
+      {
+        clam::registerOpenApiJsonEndpoint(
+            server, [] { return std::unexpected(std::string("synthetic failure")); }, "/synthetic-openapi.json");
+      });
 
   httplib::Client failureClient("127.0.0.1", failureServer.port);
   const auto failureResponse = failureClient.Get("/synthetic-openapi.json");

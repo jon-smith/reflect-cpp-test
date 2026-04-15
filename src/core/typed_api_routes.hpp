@@ -218,4 +218,4 @@ ApiRoute makeTypedBodyRoute(const TypedBodyRouteDefinition<RequestT, ErrorT, Suc
   };
 }
 
-}  // namespace clam
+} // namespace clam

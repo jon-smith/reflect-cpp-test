@@ -71,17 +71,18 @@ TestServerHandle startTestServer()
   return handle;
 }
 
-}  // namespace
+} // namespace
+
+static_assert(clam::TypedNoRequestHandler<
+              decltype([](const httplib::Request &) -> clam::TypedRouteResult<Cat, ErrorResponse>
+                       { return Cat{.catId = "cat-1", .name = "Mochi", .dateOfBirth = "2020-01-01"}; }),
+              ErrorResponse, clam::TypedResponse<200, Cat>>);
 
 static_assert(
-    clam::TypedNoRequestHandler<decltype([](const httplib::Request &) -> clam::TypedRouteResult<Cat, ErrorResponse>
-                                         { return Cat{.catId = "cat-1", .name = "Mochi", .dateOfBirth = "2020-01-01"}; }),
-                                ErrorResponse, clam::TypedResponse<200, Cat>>);
-
-static_assert(clam::TypedRequestHandler<
-              decltype([](const httplib::Request &, const CreateCatRequest &) -> clam::TypedRouteResult<Cat, ErrorResponse>
-                       { return Cat{.catId = "cat-1", .name = "Mochi", .dateOfBirth = "2020-01-01"}; }),
-              CreateCatRequest, ErrorResponse, clam::TypedResponse<201, Cat>>);
+    clam::TypedRequestHandler<decltype([](const httplib::Request &,
+                                          const CreateCatRequest &) -> clam::TypedRouteResult<Cat, ErrorResponse>
+                                       { return Cat{.catId = "cat-1", .name = "Mochi", .dateOfBirth = "2020-01-01"}; }),
+                              CreateCatRequest, ErrorResponse, clam::TypedResponse<201, Cat>>);
 
 TEST_CASE("CatLog demo spec passes integration validation", "[openapi][demo]")
 {
@@ -124,7 +125,8 @@ TEST_CASE("Cat API server exposes OpenAPI and stub routes", "[server][demo]")
   REQUIRE(missingCatResponse);
   CHECK(missingCatResponse->status == 404);
 
-  const auto createCatResponse = client.Post("/cats", R"({"name":"Mittens","dateOfBirth":"2020-02-02"})", "application/json");
+  const auto createCatResponse =
+      client.Post("/cats", R"({"name":"Mittens","dateOfBirth":"2020-02-02"})", "application/json");
   REQUIRE(createCatResponse);
   CHECK(createCatResponse->status == 201);
 

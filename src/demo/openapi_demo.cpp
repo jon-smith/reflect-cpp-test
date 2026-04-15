@@ -13,6 +13,7 @@
 
 namespace
 {
+
 std::vector<clam::OpenApiPathItem> buildOpenApiPaths()
 {
   std::vector<clam::OpenApiPathItem> pathItems;
@@ -41,7 +42,7 @@ std::vector<clam::OpenApiPathItem> buildOpenApiPaths()
   }
 
   return pathItems;
-}  // namespace
+}
 
 std::vector<clam::OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations()
 {
@@ -55,6 +56,7 @@ std::vector<clam::OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations()
 
   return schemaRegistrations;
 }
+
 }
 
 clam::OpenApiSpecConfig makeCatLogOpenApiConfig()

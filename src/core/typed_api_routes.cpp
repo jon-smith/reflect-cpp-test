@@ -37,4 +37,4 @@ void writeSerializedJsonResponse(httplib::Response &response, int status, std::s
   response.set_content(std::move(body), contentType);
 }
 
-}  // namespace clam
+} // namespace clam

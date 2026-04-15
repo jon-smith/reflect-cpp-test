@@ -22,4 +22,4 @@ void registerRoutes(httplib::Server &server, const std::vector<ApiRoute> &routes
 void registerOpenApiJsonEndpoint(httplib::Server &server, OpenApiSpecBuilder buildSpec,
                                  std::string path = "/openapi.json");
 
-}  // namespace clam
+} // namespace clam
