@@ -6,6 +6,5 @@
 
 #include "core/openapi_builder.hpp"
 
-clam::OpenApiSpecConfig makeCatLogOpenApiConfig();
-std::expected<rfl::Generic, std::string> buildOpenApiSpec();
+std::expected<rfl::Generic, std::string> buildCatLogOpenApiSpec();
 std::vector<std::string> validateOpenApiDemoSpec(const rfl::Generic &spec);

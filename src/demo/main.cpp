@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 
   std::cout << "Building open API spec..." << std::endl;
 
-  const auto spec = buildOpenApiSpec();
+  const auto spec = buildCatLogOpenApiSpec();
   if (!spec)
   {
     std::cerr << "failed to build OpenAPI spec: " << spec.error() << '\n';

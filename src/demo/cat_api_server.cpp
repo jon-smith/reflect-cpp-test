@@ -9,7 +9,7 @@
 
 void registerCatApiRoutes(httplib::Server &server)
 {
-  clam::registerOpenApiJsonEndpoint(server, [] { return buildOpenApiSpec(); });
+  clam::registerOpenApiJsonEndpoint(server, [] { return buildCatLogOpenApiSpec(); });
   clam::registerRoutes(server, makeCatApiRoutes());
 }
 

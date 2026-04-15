@@ -86,7 +86,7 @@ static_assert(
 
 TEST_CASE("CatLog demo spec passes integration validation", "[openapi][demo]")
 {
-  const auto spec = buildOpenApiSpec();
+  const auto spec = buildCatLogOpenApiSpec();
   REQUIRE(spec.has_value());
   CHECK(validateOpenApiDemoSpec(spec.value()).empty());
 }

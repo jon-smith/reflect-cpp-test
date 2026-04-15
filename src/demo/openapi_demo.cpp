@@ -57,8 +57,6 @@ std::vector<clam::OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations()
   return schemaRegistrations;
 }
 
-}
-
 clam::OpenApiSpecConfig makeCatLogOpenApiConfig()
 {
   return clam::OpenApiSpecConfig{
@@ -77,8 +75,9 @@ clam::OpenApiSpecConfig makeCatLogOpenApiConfig()
       .schemaRegistrations = buildOpenApiSchemaRegistrations(),
   };
 }
+}
 
-std::expected<rfl::Generic, std::string> buildOpenApiSpec()
+std::expected<rfl::Generic, std::string> buildCatLogOpenApiSpec()
 {
   return clam::buildOpenApiSpec(makeCatLogOpenApiConfig());
 }
