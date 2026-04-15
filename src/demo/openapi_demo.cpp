@@ -83,11 +83,6 @@ std::expected<rfl::Generic, std::string> buildOpenApiSpec()
   return clam::buildOpenApiSpec(makeCatLogOpenApiConfig());
 }
 
-std::expected<rfl::Generic, std::string> buildOpenApiSpec(const clam::OpenApiSpecConfig &config)
-{
-  return clam::buildOpenApiSpec(config);
-}
-
 std::vector<std::string> validateOpenApiDemoSpec(const rfl::Generic &spec)
 {
   std::vector<std::string> errors;
@@ -262,15 +257,4 @@ std::vector<std::string> validateOpenApiDemoSpec(const rfl::Generic &spec)
   }
 
   return errors;
-}
-
-std::vector<std::string> validateOpenApiDemoSpec()
-{
-  const auto spec = buildOpenApiSpec();
-  if (!spec)
-  {
-    return {spec.error()};
-  }
-
-  return validateOpenApiDemoSpec(spec.value());
 }
