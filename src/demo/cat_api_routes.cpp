@@ -91,7 +91,7 @@ ErrorResponse makeErrorResponse(const std::string &code, const std::string &mess
   };
 }
 
-clam::TypedErrorResponseSpec<ErrorResponse> makeErrorSpec(int status, const std::string &description,
+clam::TypedErrorResponseSpec<ErrorResponse> makeErrorSpec(const int status, const std::string &description,
                                                           const std::string &code, const std::string &message)
 {
   return clam::TypedErrorResponseSpec<ErrorResponse>{
