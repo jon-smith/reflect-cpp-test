@@ -21,8 +21,8 @@ out/build/clang-release/src/reflect_cpp_test
 
 ## OpenAPI Demo
 
-The application now demonstrates how to turn C++ DTOs into an OpenAPI 3.1
-document for a CatLog webserver-style API, while also carving out a reusable
+The application demonstrates how to turn C++ DTOs into an OpenAPI 3.1
+document for a simple webserver API, while also carving out a reusable
 core library for future APIs.
 
 This demo uses `rfl::json::to_schema<T>()` to generate JSON Schema for each C++
