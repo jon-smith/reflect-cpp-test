@@ -19,9 +19,9 @@ using OpenApiExpectedJsonObject = std::expected<OpenApiJson::Object, std::string
 using OpenApiExpectedString = std::expected<std::string, std::string>;
 using OpenApiExpectedBool = std::expected<bool, std::string>;
 
-template <class T> struct OpenApiSchemaTraits;
+template <typename T> struct OpenApiSchemaTraits;
 
-template <class T> std::string openApiSchemaName()
+template <typename T> std::string openApiSchemaName()
 {
   return std::string(OpenApiSchemaTraits<T>::name);
 }
@@ -54,7 +54,7 @@ struct OpenApiRequestBody
   std::string contentType = "application/json";
   std::string schemaName;
 
-  template <class T>
+  template <typename T>
   static OpenApiRequestBody fromType(bool required = true, std::string contentType = "application/json")
   {
     return OpenApiRequestBody{
@@ -72,7 +72,7 @@ struct OpenApiResponse
   std::string schemaName;
   std::string contentType = "application/json";
 
-  template <class T>
+  template <typename T>
   static OpenApiResponse fromType(std::string statusCode, std::string description,
                                   std::string contentType = "application/json")
   {
@@ -133,7 +133,7 @@ std::expected<void, std::string> registerGeneratedSchemaDocument(const std::stri
 
 std::expected<OpenApiJson, std::string> buildOpenApiSpec(const OpenApiSpecConfig &config);
 
-template <class T> OpenApiSchemaRegistrar makeOpenApiSchemaRegistration()
+template <typename T> OpenApiSchemaRegistrar makeOpenApiSchemaRegistration()
 {
   return [](OpenApiJson::Object &schemas) -> std::expected<void, std::string>
   { return registerGeneratedSchemaDocument(rfl::json::to_schema<T>(), schemas); };

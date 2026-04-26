@@ -28,7 +28,7 @@ std::string requireString(const clam::OpenApiJson &json, const std::string &cont
   return value.value();
 }
 
-template <class T> T requireJsonBody(const std::string &body)
+template <typename T> T requireJsonBody(const std::string &body)
 {
   const auto parsed = rfl::json::read<T>(body);
   REQUIRE(parsed.has_value());
@@ -48,7 +48,7 @@ public:
   TestServerHandle(TestServerHandle &&) noexcept = delete;
   TestServerHandle &operator=(TestServerHandle &&) noexcept = delete;
 
-  template <class SetupFn> explicit TestServerHandle(SetupFn &&setup)
+  template <typename SetupFn> explicit TestServerHandle(SetupFn &&setup)
   {
     setup(server);
     port = server.bind_to_any_port("127.0.0.1");
@@ -73,7 +73,7 @@ public:
   }
 };
 
-template <class SetupFn> TestServerHandle startTestServer(SetupFn &&setup)
+template <typename SetupFn> TestServerHandle startTestServer(SetupFn &&setup)
 {
   return TestServerHandle(std::forward<SetupFn>(setup));
 }

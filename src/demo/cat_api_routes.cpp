@@ -69,7 +69,7 @@ public:
 
 const auto dataStore = MockDataStore{};
 
-template <class T> using CatRouteResult = clam::TypedRouteResult<T, ErrorResponse>;
+template <typename T> using CatRouteResult = clam::TypedRouteResult<T, ErrorResponse>;
 
 clam::OpenApiParameter makeCatIdParameter(const std::string &description)
 {

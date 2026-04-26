@@ -31,7 +31,7 @@ std::string requireString(const clam::OpenApiJson &json, const std::string &cont
   return value.value();
 }
 
-template <class T> T requireJsonBody(const std::string &body)
+template <typename T> T requireJsonBody(const std::string &body)
 {
   const auto parsed = rfl::json::read<T>(body);
   REQUIRE(parsed.has_value());

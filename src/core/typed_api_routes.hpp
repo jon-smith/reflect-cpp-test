@@ -43,7 +43,7 @@ template <int StatusCode, class T> struct TypedResponse
   using Payload = T;
 };
 
-template <class ErrorT> struct TypedErrorResponseSpec
+template <typename ErrorT> struct TypedErrorResponseSpec
 {
   int status;
   std::string description;
@@ -51,20 +51,20 @@ template <class ErrorT> struct TypedErrorResponseSpec
   std::string contentType = "application/json";
 };
 
-template <class ErrorT> struct TypedRouteError
+template <typename ErrorT> struct TypedRouteError
 {
   int status;
   ErrorT payload;
   std::string contentType = "application/json";
 };
 
-template <class SuccessT, class ErrorT> using TypedRouteResult = std::variant<SuccessT, TypedRouteError<ErrorT>>;
+template <typename SuccessT, class ErrorT> using TypedRouteResult = std::variant<SuccessT, TypedRouteError<ErrorT>>;
 
-template <class Handler, class ErrorT, class SuccessT>
+template <typename Handler, class ErrorT, class SuccessT>
 concept TypedNoRequestHandler = std::same_as<std::invoke_result_t<Handler, const httplib::Request &>,
                                              TypedRouteResult<typename SuccessT::Payload, ErrorT>>;
 
-template <class Handler, class RequestT, class ErrorT, class SuccessT>
+template <typename Handler, class RequestT, class ErrorT, class SuccessT>
 concept TypedRequestHandler = std::same_as<std::invoke_result_t<Handler, const httplib::Request &, const RequestT &>,
                                            TypedRouteResult<typename SuccessT::Payload, ErrorT>>;
 
@@ -78,14 +78,14 @@ struct TypedRouteMetadata
   std::vector<OpenApiParameter> parameters;
 };
 
-template <class ErrorT, class SuccessResponseT> struct TypedGetRouteDefinition
+template <typename ErrorT, class SuccessResponseT> struct TypedGetRouteDefinition
 {
   TypedRouteMetadata metadata;
   std::string successDescription;
   std::vector<TypedErrorResponseSpec<ErrorT>> errorResponses;
 };
 
-template <class RequestT, class ErrorT, class SuccessResponseT> struct TypedBodyRouteDefinition
+template <typename RequestT, class ErrorT, class SuccessResponseT> struct TypedBodyRouteDefinition
 {
   TypedRouteMetadata metadata;
   bool requestBodyRequired = true;
@@ -102,14 +102,14 @@ std::string_view toOpenApiMethod(HttpMethod method);
 void writeSerializedJsonResponse(httplib::Response &response, int status, std::string body,
                                  const std::string &contentType = "application/json");
 
-template <class ErrorT>
+template <typename ErrorT>
 OpenApiResponse makeTypedErrorOpenApiResponse(const TypedErrorResponseSpec<ErrorT> &errorResponse)
 {
   return OpenApiResponse::fromType<ErrorT>(std::to_string(errorResponse.status), errorResponse.description,
                                            errorResponse.contentType);
 }
 
-template <class ErrorT>
+template <typename ErrorT>
 TypedRouteError<ErrorT> makeTypedRouteError(const TypedErrorResponseSpec<ErrorT> &errorResponse,
                                             const std::string &detail = "")
 {
@@ -120,7 +120,7 @@ TypedRouteError<ErrorT> makeTypedRouteError(const TypedErrorResponseSpec<ErrorT>
   };
 }
 
-template <class ErrorT, class SuccessResponseT>
+template <typename ErrorT, class SuccessResponseT>
 ApiRoute makeTypedGetRoute(const TypedGetRouteDefinition<ErrorT, SuccessResponseT> &definition,
                            TypedNoRequestHandler<ErrorT, SuccessResponseT> auto handler)
 {
@@ -166,7 +166,7 @@ ApiRoute makeTypedGetRoute(const TypedGetRouteDefinition<ErrorT, SuccessResponse
   };
 }
 
-template <class RequestT, class ErrorT, class SuccessResponseT>
+template <typename RequestT, class ErrorT, class SuccessResponseT>
 ApiRoute makeTypedBodyRoute(const TypedBodyRouteDefinition<RequestT, ErrorT, SuccessResponseT> &definition,
                             TypedRequestHandler<RequestT, ErrorT, SuccessResponseT> auto handler)
 {
