@@ -294,6 +294,11 @@ ExpectedVoid registerGeneratedSchemaDocument(const std::string &schemaJson, Json
     return std::unexpected(schemaRoot.error());
   }
 
+  if (schemaRoot.value().count("$defs") == 0U)
+  {
+    return std::unexpected("reflect-cpp JSON schema did not contain $defs.");
+  }
+
   auto definitions = toObject(schemaRoot.value().at("$defs"), "$defs");
   if (!definitions)
   {

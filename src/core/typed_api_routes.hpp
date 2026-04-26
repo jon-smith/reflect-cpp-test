@@ -55,6 +55,7 @@ template <class ErrorT> struct TypedRouteError
 {
   int status;
   ErrorT payload;
+  std::string contentType = "application/json";
 };
 
 template <class SuccessT, class ErrorT> using TypedRouteResult = std::variant<SuccessT, TypedRouteError<ErrorT>>;
@@ -115,6 +116,7 @@ TypedRouteError<ErrorT> makeTypedRouteError(const TypedErrorResponseSpec<ErrorT>
   return TypedRouteError<ErrorT>{
       .status = errorResponse.status,
       .payload = errorResponse.makePayload(detail),
+      .contentType = errorResponse.contentType,
   };
 }
 
@@ -159,7 +161,7 @@ ApiRoute makeTypedGetRoute(const TypedGetRouteDefinition<ErrorT, SuccessResponse
         }
 
         const auto &error = std::get<TypedRouteError<ErrorT>>(result);
-        writeSerializedJsonResponse(response, error.status, rfl::json::write(error.payload));
+        writeSerializedJsonResponse(response, error.status, rfl::json::write(error.payload), error.contentType);
       },
   };
 }
@@ -213,7 +215,7 @@ ApiRoute makeTypedBodyRoute(const TypedBodyRouteDefinition<RequestT, ErrorT, Suc
         }
 
         const auto &error = std::get<TypedRouteError<ErrorT>>(result);
-        writeSerializedJsonResponse(response, error.status, rfl::json::write(error.payload));
+        writeSerializedJsonResponse(response, error.status, rfl::json::write(error.payload), error.contentType);
       },
   };
 }
