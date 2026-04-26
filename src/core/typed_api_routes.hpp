@@ -198,11 +198,29 @@ ApiRoute makeTypedBodyRoute(const TypedBodyRouteDefinition<RequestT, ErrorT, Suc
       .handler =
           [definition, handler = std::move(handler)](const httplib::Request &request, httplib::Response &response)
       {
+        if (request.body.empty() && !definition.requestBodyRequired)
+        {
+          if constexpr (std::default_initializable<RequestT>)
+          {
+            const auto result = handler(request, RequestT{});
+            if (std::holds_alternative<typename SuccessResponseT::Payload>(result))
+            {
+              writeSerializedJsonResponse(response, SuccessResponseT::statusCode,
+                                          rfl::json::write(std::get<typename SuccessResponseT::Payload>(result)));
+              return;
+            }
+
+            const auto &error = std::get<TypedRouteError<ErrorT>>(result);
+            writeSerializedJsonResponse(response, error.status, rfl::json::write(error.payload), error.contentType);
+            return;
+          }
+        }
+
         const auto parsed = rfl::json::read<RequestT>(request.body);
         if (!parsed)
         {
           const auto error = makeTypedRouteError(definition.parseErrorResponse, parsed.error().what());
-          writeSerializedJsonResponse(response, error.status, rfl::json::write(error.payload));
+          writeSerializedJsonResponse(response, error.status, rfl::json::write(error.payload), error.contentType);
           return;
         }
 

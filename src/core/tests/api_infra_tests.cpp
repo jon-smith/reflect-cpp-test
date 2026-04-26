@@ -90,6 +90,11 @@ struct SyntheticError
   std::string reason;
 };
 
+struct OptionalSyntheticRequest
+{
+  std::string value;
+};
+
 namespace clam
 {
 template <> struct OpenApiSchemaTraits<SyntheticResponse>
@@ -100,6 +105,11 @@ template <> struct OpenApiSchemaTraits<SyntheticResponse>
 template <> struct OpenApiSchemaTraits<SyntheticError>
 {
   static constexpr std::string_view name = "SyntheticError";
+};
+
+template <> struct OpenApiSchemaTraits<OptionalSyntheticRequest>
+{
+  static constexpr std::string_view name = "OptionalSyntheticRequest";
 };
 }
 
@@ -226,6 +236,51 @@ TEST_CASE("shared route registration mounts GET and POST ApiRoute handlers", "[s
   const auto postResponse = client.Post("/synthetic-post", R"({"ok":"post"})", "application/json");
   REQUIRE(postResponse);
   CHECK(postResponse->status == 201);
+}
+
+TEST_CASE("typed body routes honour optional bodies and parse error content types", "[server][routes][core]")
+{
+  auto parseError = clam::TypedErrorResponseSpec<SyntheticError>{
+      .status = 422,
+      .description = "Synthetic parse failure.",
+      .makePayload = [](const std::string &detail) { return SyntheticError{.reason = detail}; },
+      .contentType = "application/problem+json",
+  };
+
+  const auto serverHandle = startTestServer(
+      [parseError](httplib::Server &server)
+      {
+        clam::registerRoute(server,
+                            clam::makeTypedBodyRoute<OptionalSyntheticRequest, SyntheticError,
+                                                     clam::TypedResponse<200, SyntheticResponse>>(
+                                {
+                                    .metadata =
+                                        {
+                                            .method = clam::HttpMethod::post,
+                                            .openApiPath = "/synthetic-optional",
+                                            .httplibPattern = "/synthetic-optional",
+                                            .summary = "Synthetic optional body",
+                                            .operationId = "syntheticOptionalBody",
+                                        },
+                                    .requestBodyRequired = false,
+                                    .successDescription = "Synthetic response.",
+                                    .parseErrorResponse = parseError,
+                                },
+                                [](const httplib::Request &, const OptionalSyntheticRequest &body)
+                                    -> clam::TypedRouteResult<SyntheticResponse, SyntheticError>
+                                { return SyntheticResponse{.ok = body.value.empty() ? "empty" : body.value}; }));
+      });
+
+  httplib::Client client("127.0.0.1", serverHandle.getPort());
+  const auto omittedBodyResponse = client.Post("/synthetic-optional");
+  REQUIRE(omittedBodyResponse);
+  CHECK(omittedBodyResponse->status == 200);
+  CHECK(requireJsonBody<SyntheticResponse>(omittedBodyResponse->body).ok == "empty");
+
+  const auto invalidBodyResponse = client.Post("/synthetic-optional", "{", "application/json");
+  REQUIRE(invalidBodyResponse);
+  CHECK(invalidBodyResponse->status == 422);
+  CHECK(invalidBodyResponse->get_header_value("Content-Type") == "application/problem+json");
 }
 
 TEST_CASE("shared OpenAPI endpoint registration serves success and generic failure JSON", "[server][shared][core]")

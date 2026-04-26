@@ -1,5 +1,6 @@
 #include "core/typed_api_routes.hpp"
 
+#include <unordered_map>
 #include <utility>
 
 namespace clam
