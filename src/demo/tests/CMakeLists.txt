@@ -1,7 +1,7 @@
 include(Catch)
 
 add_executable(reflect_cpp_openapi_demo_tests
-  openapi_tests.cpp
+  cat_api_demo_tests.cpp
 )
 
 target_link_libraries(reflect_cpp_openapi_demo_tests
