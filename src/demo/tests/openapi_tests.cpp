@@ -40,36 +40,42 @@ template <class T> T requireJsonBody(const std::string &body)
 
 struct TestServerHandle
 {
-  std::unique_ptr<httplib::Server> server = std::make_unique<httplib::Server>();
+private:
+  httplib::Server server;
   std::thread thread;
-  int port = -1;
+  int port;
 
-  TestServerHandle() = default;
+public:
   TestServerHandle(const TestServerHandle &) = delete;
   TestServerHandle &operator=(const TestServerHandle &) = delete;
-  TestServerHandle(TestServerHandle &&) noexcept = default;
-  TestServerHandle &operator=(TestServerHandle &&) noexcept = default;
+  TestServerHandle(TestServerHandle &&) noexcept = delete;
+  TestServerHandle &operator=(TestServerHandle &&) noexcept = delete;
+
+  TestServerHandle()
+  {
+    registerCatApiRoutes(server);
+    port = server.bind_to_any_port("127.0.0.1");
+    REQUIRE(port > 0);
+    thread = std::thread([this] { server.listen_after_bind(); });
+
+    // todo, replace with cv
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  }
 
   ~TestServerHandle()
   {
-    server->stop();
+    server.stop();
     if (thread.joinable())
     {
       thread.join();
     }
   }
-};
 
-TestServerHandle startTestServer()
-{
-  TestServerHandle handle;
-  registerCatApiRoutes(*handle.server);
-  handle.port = handle.server->bind_to_any_port("127.0.0.1");
-  REQUIRE(handle.port > 0);
-  handle.thread = std::thread([server = handle.server.get()] { server->listen_after_bind(); });
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  return handle;
-}
+  int getPort() const
+  {
+    return port;
+  }
+};
 
 }
 
@@ -106,8 +112,8 @@ TEST_CASE("Cat API route registry is the shared source of truth", "[openapi][rou
 
 TEST_CASE("Cat API server exposes OpenAPI and stub routes", "[server][demo]")
 {
-  auto handle = startTestServer();
-  httplib::Client client("127.0.0.1", handle.port);
+  TestServerHandle handle;
+  httplib::Client client("127.0.0.1", handle.getPort());
 
   const auto openapiResponse = client.Get("/openapi.json");
   REQUIRE(openapiResponse);
