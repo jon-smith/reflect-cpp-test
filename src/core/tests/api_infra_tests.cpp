@@ -1,6 +1,5 @@
 #include <chrono>
 #include <concepts>
-#include <memory>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -38,37 +37,45 @@ template <class T> T requireJsonBody(const std::string &body)
 
 struct TestServerHandle
 {
-  std::unique_ptr<httplib::Server> server = std::make_unique<httplib::Server>();
+private:
+  httplib::Server server;
   std::thread thread;
-  int port = -1;
+  int port;
 
-  TestServerHandle() = default;
+public:
   TestServerHandle(const TestServerHandle &) = delete;
   TestServerHandle &operator=(const TestServerHandle &) = delete;
-  TestServerHandle(TestServerHandle &&) noexcept = default;
-  TestServerHandle &operator=(TestServerHandle &&) noexcept = default;
+  TestServerHandle(TestServerHandle &&) noexcept = delete;
+  TestServerHandle &operator=(TestServerHandle &&) noexcept = delete;
+
+  template <class SetupFn> explicit TestServerHandle(SetupFn &&setup)
+  {
+    setup(server);
+    port = server.bind_to_any_port("127.0.0.1");
+    REQUIRE(port > 0);
+    thread = std::thread([this] { server.listen_after_bind(); });
+    server.wait_until_ready();
+    REQUIRE(server.is_running());
+  }
 
   ~TestServerHandle()
   {
-    server->stop();
+    server.stop();
     if (thread.joinable())
     {
       thread.join();
     }
   }
+
+  int getPort() const
+  {
+    return port;
+  }
 };
 
 template <class SetupFn> TestServerHandle startTestServer(SetupFn &&setup)
 {
-  TestServerHandle handle;
-  setup(*handle.server);
-  handle.port = handle.server->bind_to_any_port("127.0.0.1");
-  REQUIRE(handle.port > 0);
-
-  handle.thread = std::thread([server = handle.server.get()] { server->listen_after_bind(); });
-  handle.server->wait_until_ready();
-  REQUIRE(handle.server->is_running());
-  return handle;
+  return TestServerHandle(std::forward<SetupFn>(setup));
 }
 
 }
@@ -211,7 +218,7 @@ TEST_CASE("shared route registration mounts GET and POST ApiRoute handlers", "[s
                              });
       });
 
-  httplib::Client client("127.0.0.1", serverHandle.port);
+  httplib::Client client("127.0.0.1", serverHandle.getPort());
   const auto getResponse = client.Get("/synthetic-get");
   REQUIRE(getResponse);
   CHECK(getResponse->status == 200);
@@ -238,7 +245,7 @@ TEST_CASE("shared OpenAPI endpoint registration serves success and generic failu
             });
       });
 
-  httplib::Client successClient("127.0.0.1", successServer.port);
+  httplib::Client successClient("127.0.0.1", successServer.getPort());
   const auto successResponse = successClient.Get("/openapi.json");
   REQUIRE(successResponse);
   CHECK(successResponse->status == 200);
@@ -250,7 +257,7 @@ TEST_CASE("shared OpenAPI endpoint registration serves success and generic failu
             server, [] { return std::unexpected(std::string("synthetic failure")); }, "/synthetic-openapi.json");
       });
 
-  httplib::Client failureClient("127.0.0.1", failureServer.port);
+  httplib::Client failureClient("127.0.0.1", failureServer.getPort());
   const auto failureResponse = failureClient.Get("/synthetic-openapi.json");
   REQUIRE(failureResponse);
   CHECK(failureResponse->status == 500);
