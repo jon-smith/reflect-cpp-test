@@ -57,9 +57,8 @@ public:
     port = server.bind_to_any_port("127.0.0.1");
     REQUIRE(port > 0);
     thread = std::thread([this] { server.listen_after_bind(); });
-
-    // todo, replace with cv
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    server.wait_until_ready();
+    REQUIRE(server.is_running());
   }
 
   ~TestServerHandle()

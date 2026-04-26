@@ -66,7 +66,8 @@ template <class SetupFn> TestServerHandle startTestServer(SetupFn &&setup)
   REQUIRE(handle.port > 0);
 
   handle.thread = std::thread([server = handle.server.get()] { server->listen_after_bind(); });
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  handle.server->wait_until_ready();
+  REQUIRE(handle.server->is_running());
   return handle;
 }
 
