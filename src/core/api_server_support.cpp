@@ -10,9 +10,9 @@ namespace clam
 namespace
 {
 
-OpenApiJson makeOpenApiGenerationErrorBody(const std::string &detail)
+OpenApiJson MakeOpenApiGenerationErrorBody(const std::string &detail)
 {
-  return makeObject({
+  return MakeObject({
       {"error", "openapi_generation_failed"},
       {"message", "Failed to build the OpenAPI document."},
       {"detail", detail},
@@ -21,7 +21,7 @@ OpenApiJson makeOpenApiGenerationErrorBody(const std::string &detail)
 
 }
 
-void registerRoute(httplib::Server &server, const ApiRoute &route)
+void RegisterRoute(httplib::Server &server, const ApiRoute &route)
 {
   if (route.method == HttpMethod::get)
   {
@@ -35,15 +35,15 @@ void registerRoute(httplib::Server &server, const ApiRoute &route)
   }
 }
 
-void registerRoutes(httplib::Server &server, const std::vector<ApiRoute> &routes)
+void RegisterRoutes(httplib::Server &server, const std::vector<ApiRoute> &routes)
 {
   for (const auto &route : routes)
   {
-    registerRoute(server, route);
+    RegisterRoute(server, route);
   }
 }
 
-void registerOpenApiJsonEndpoint(httplib::Server &server, OpenApiSpecBuilder buildSpec, std::string path)
+void RegisterOpenApiJsonEndpoint(httplib::Server &server, OpenApiSpecBuilder buildSpec, std::string path)
 {
   server.Get(std::move(path),
              [buildSpec = std::move(buildSpec)](const httplib::Request &, httplib::Response &response)
@@ -52,7 +52,7 @@ void registerOpenApiJsonEndpoint(httplib::Server &server, OpenApiSpecBuilder bui
                if (!spec)
                {
                  response.status = 500;
-                 response.set_content(rfl::json::write(makeOpenApiGenerationErrorBody(spec.error())),
+                 response.set_content(rfl::json::write(MakeOpenApiGenerationErrorBody(spec.error())),
                                       "application/json");
                  return;
                }

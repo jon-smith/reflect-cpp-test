@@ -17,21 +17,21 @@
 namespace
 {
 
-clam::OpenApiJson::Object requireObject(const clam::OpenApiJson &json, const std::string &context)
+clam::OpenApiJson::Object RequireObject(const clam::OpenApiJson &json, const std::string &context)
 {
-  const auto object = clam::toObject(json, context);
+  const auto object = clam::ToObject(json, context);
   REQUIRE(object.has_value());
   return object.value();
 }
 
-std::string requireString(const clam::OpenApiJson &json, const std::string &context)
+std::string RequireString(const clam::OpenApiJson &json, const std::string &context)
 {
-  const auto value = clam::toString(json, context);
+  const auto value = clam::ToString(json, context);
   REQUIRE(value.has_value());
   return value.value();
 }
 
-template <typename T> T requireJsonBody(const std::string &body)
+template <typename T> T RequireJsonBody(const std::string &body)
 {
   const auto parsed = rfl::json::read<T>(body);
   REQUIRE(parsed.has_value());
@@ -53,7 +53,7 @@ public:
 
   TestServerHandle()
   {
-    registerCatApiRoutes(server);
+    RegisterCatApiRoutes(server);
     port = server.bind_to_any_port("127.0.0.1");
     REQUIRE(port > 0);
     thread = std::thread([this] { server.listen_after_bind(); });
@@ -91,14 +91,14 @@ static_assert(
 
 TEST_CASE("CatLog demo spec passes integration validation", "[openapi][demo]")
 {
-  const auto spec = buildCatLogOpenApiSpec();
+  const auto spec = BuildCatLogOpenApiSpec();
   REQUIRE(spec.has_value());
-  CHECK(validateOpenApiDemoSpec(spec.value()).empty());
+  CHECK(ValidateOpenApiDemoSpec(spec.value()).empty());
 }
 
 TEST_CASE("Cat API route registry is the shared source of truth", "[openapi][routes][demo]")
 {
-  const auto routes = makeCatApiRoutes();
+  const auto routes = MakeCatApiRoutes();
 
   REQUIRE(routes.size() == 5U);
   CHECK(routes[0].method == clam::HttpMethod::get);
@@ -117,13 +117,13 @@ TEST_CASE("Cat API server exposes OpenAPI and stub routes", "[server][demo]")
   const auto openapiResponse = client.Get("/openapi.json");
   REQUIRE(openapiResponse);
   CHECK(openapiResponse->status == 200);
-  const auto spec = requireJsonBody<clam::OpenApiJson>(openapiResponse->body);
-  CHECK(requireString(requireObject(spec, "served spec").at("openapi"), "version") == "3.1.0");
+  const auto spec = RequireJsonBody<clam::OpenApiJson>(openapiResponse->body);
+  CHECK(RequireString(RequireObject(spec, "served spec").at("openapi"), "version") == "3.1.0");
 
   const auto catsResponse = client.Get("/cats");
   REQUIRE(catsResponse);
   CHECK(catsResponse->status == 200);
-  const auto cats = requireJsonBody<CatListResponse>(catsResponse->body);
+  const auto cats = RequireJsonBody<CatListResponse>(catsResponse->body);
   REQUIRE(cats.cats.get().size() == 1U);
 
   const auto missingCatResponse = client.Get("/cats/not-found");

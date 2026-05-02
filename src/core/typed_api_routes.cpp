@@ -6,7 +6,7 @@
 namespace clam
 {
 
-OpenApiOperation makeOpenApiOperation(const TypedRouteMetadata &metadata, std::optional<OpenApiRequestBody> requestBody,
+OpenApiOperation MakeOpenApiOperation(const TypedRouteMetadata &metadata, std::optional<OpenApiRequestBody> requestBody,
                                       std::vector<OpenApiResponse> responses)
 {
   return OpenApiOperation{
@@ -18,7 +18,7 @@ OpenApiOperation makeOpenApiOperation(const TypedRouteMetadata &metadata, std::o
   };
 }
 
-std::string_view toOpenApiMethod(const HttpMethod method)
+std::string_view ToOpenApiMethod(const HttpMethod method)
 {
   switch (method)
   {
@@ -31,14 +31,14 @@ std::string_view toOpenApiMethod(const HttpMethod method)
   return "get";
 }
 
-void writeSerializedJsonResponse(httplib::Response &response, int status, std::string body,
+void WriteSerializedJsonResponse(httplib::Response &response, int status, std::string body,
                                  const std::string &contentType)
 {
   response.status = status;
   response.set_content(std::move(body), contentType);
 }
 
-std::vector<clam::OpenApiPathItem> buildOpenApiPaths(const std::vector<clam::ApiRoute> &apiRoutes)
+std::vector<clam::OpenApiPathItem> BuildOpenApiPaths(const std::vector<clam::ApiRoute> &apiRoutes)
 {
   std::vector<clam::OpenApiPathItem> pathItems;
   std::unordered_map<std::string, std::size_t> pathIndexes;
@@ -52,7 +52,7 @@ std::vector<clam::OpenApiPathItem> buildOpenApiPaths(const std::vector<clam::Api
       pathItems.push_back(clam::OpenApiPathItem{
           .path = route.openApiPath,
           .operations = {clam::OpenApiPathOperation{
-              .method = std::string(clam::toOpenApiMethod(route.method)),
+              .method = std::string(clam::ToOpenApiMethod(route.method)),
               .operation = route.operation,
           }},
       });
@@ -60,7 +60,7 @@ std::vector<clam::OpenApiPathItem> buildOpenApiPaths(const std::vector<clam::Api
     }
 
     pathItems[it->second].operations.push_back(clam::OpenApiPathOperation{
-        .method = std::string(clam::toOpenApiMethod(route.method)),
+        .method = std::string(clam::ToOpenApiMethod(route.method)),
         .operation = route.operation,
     });
   }
@@ -68,7 +68,7 @@ std::vector<clam::OpenApiPathItem> buildOpenApiPaths(const std::vector<clam::Api
   return pathItems;
 }
 
-std::vector<clam::OpenApiSchemaRegistrar> buildOpenApiSchemaRegistrations(const std::vector<clam::ApiRoute> &apiRoutes)
+std::vector<clam::OpenApiSchemaRegistrar> BuildOpenApiSchemaRegistrations(const std::vector<clam::ApiRoute> &apiRoutes)
 {
   std::vector<clam::OpenApiSchemaRegistrar> schemaRegistrations;
 

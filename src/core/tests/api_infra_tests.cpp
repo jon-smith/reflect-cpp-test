@@ -14,21 +14,21 @@
 namespace
 {
 
-clam::OpenApiJson::Object requireObject(const clam::OpenApiJson &json, const std::string &context)
+clam::OpenApiJson::Object RequireObject(const clam::OpenApiJson &json, const std::string &context)
 {
-  const auto object = clam::toObject(json, context);
+  const auto object = clam::ToObject(json, context);
   REQUIRE(object.has_value());
   return object.value();
 }
 
-std::string requireString(const clam::OpenApiJson &json, const std::string &context)
+std::string RequireString(const clam::OpenApiJson &json, const std::string &context)
 {
-  const auto value = clam::toString(json, context);
+  const auto value = clam::ToString(json, context);
   REQUIRE(value.has_value());
   return value.value();
 }
 
-template <typename T> T requireJsonBody(const std::string &body)
+template <typename T> T RequireJsonBody(const std::string &body)
 {
   const auto parsed = rfl::json::read<T>(body);
   REQUIRE(parsed.has_value());
@@ -73,7 +73,7 @@ public:
   }
 };
 
-template <typename SetupFn> TestServerHandle startTestServer(SetupFn &&setup)
+template <typename SetupFn> TestServerHandle StartTestServer(SetupFn &&setup)
 {
   return TestServerHandle(std::forward<SetupFn>(setup));
 }
@@ -118,7 +118,7 @@ static_assert(clam::TypedNoRequestHandler<
                        { return SyntheticResponse{.ok = "yes"}; }),
               SyntheticError, clam::TypedResponse<200, SyntheticResponse>>);
 
-TEST_CASE("registerGeneratedSchemaDocument rewrites nested defs references", "[openapi][builder][core]")
+TEST_CASE("RegisterGeneratedSchemaDocument rewrites nested defs references", "[openapi][builder][core]")
 {
   const std::string schemaJson = R"({
     "$defs": {
@@ -145,25 +145,25 @@ TEST_CASE("registerGeneratedSchemaDocument rewrites nested defs references", "[o
   })";
 
   clam::OpenApiJson::Object schemas;
-  const auto result = clam::registerGeneratedSchemaDocument(schemaJson, schemas);
+  const auto result = clam::RegisterGeneratedSchemaDocument(schemaJson, schemas);
 
   REQUIRE(result.has_value());
   REQUIRE(schemas.count("🐱") == 1U);
   REQUIRE(schemas.count("🐟") == 1U);
   REQUIRE(schemas.count("🌙") == 1U);
 
-  const auto catContainsFish = clam::containsSchemaRef(schemas.at("🐱"), "#/components/schemas/🐟");
+  const auto catContainsFish = clam::ContainsSchemaRef(schemas.at("🐱"), "#/components/schemas/🐟");
   REQUIRE(catContainsFish.has_value());
   CHECK(catContainsFish.value());
 
-  const auto catContainsMoon = clam::containsSchemaRef(schemas.at("🐱"), "#/components/schemas/🌙");
+  const auto catContainsMoon = clam::ContainsSchemaRef(schemas.at("🐱"), "#/components/schemas/🌙");
   REQUIRE(catContainsMoon.has_value());
   CHECK(catContainsMoon.value());
 }
 
-TEST_CASE("buildOpenApiSpec assembles optional sections and component refs", "[openapi][builder][core]")
+TEST_CASE("BuildOpenApiSpec assembles optional sections and component refs", "[openapi][builder][core]")
 {
-  const auto minimalSpec = clam::buildOpenApiSpec(clam::OpenApiSpecConfig{
+  const auto minimalSpec = clam::BuildOpenApiSpec(clam::OpenApiSpecConfig{
       .info = {.title = "Minimal API", .version = "0.1.0", .description = "Minimal builder test."},
       .paths = {clam::OpenApiPathItem{
           .path = "/ping",
@@ -186,22 +186,22 @@ TEST_CASE("buildOpenApiSpec assembles optional sections and component refs", "[o
               },
           },
       }},
-      .schemaRegistrations = {clam::makeOpenApiSchemaRegistration<SyntheticError>()},
+      .schemaRegistrations = {clam::MakeOpenApiSchemaRegistration<SyntheticError>()},
   });
 
   REQUIRE(minimalSpec.has_value());
-  const auto minimalDocument = requireObject(minimalSpec.value(), "minimal document");
+  const auto minimalDocument = RequireObject(minimalSpec.value(), "minimal document");
   CHECK(minimalDocument.count("servers") == 0U);
-  const auto pingPath = requireObject(requireObject(minimalDocument.at("paths"), "paths").at("/ping"), "/ping");
-  CHECK(requireObject(pingPath.at("get"), "/ping get").count("requestBody") == 0U);
+  const auto pingPath = RequireObject(RequireObject(minimalDocument.at("paths"), "paths").at("/ping"), "/ping");
+  CHECK(RequireObject(pingPath.at("get"), "/ping get").count("requestBody") == 0U);
 }
 
 TEST_CASE("shared route registration mounts GET and POST ApiRoute handlers", "[server][shared][core]")
 {
-  const auto serverHandle = startTestServer(
+  const auto serverHandle = StartTestServer(
       [](httplib::Server &server)
       {
-        clam::registerRoutes(server,
+        clam::RegisterRoutes(server,
                              std::vector<clam::ApiRoute>{
                                  clam::ApiRoute{
                                      .method = clam::HttpMethod::get,
@@ -247,11 +247,11 @@ TEST_CASE("typed body routes honour optional bodies and parse error content type
       .contentType = "application/problem+json",
   };
 
-  const auto serverHandle = startTestServer(
+  const auto serverHandle = StartTestServer(
       [parseError](httplib::Server &server)
       {
-        clam::registerRoute(server,
-                            clam::makeTypedBodyRoute<OptionalSyntheticRequest, SyntheticError,
+        clam::RegisterRoute(server,
+                            clam::MakeTypedBodyRoute<OptionalSyntheticRequest, SyntheticError,
                                                      clam::TypedResponse<200, SyntheticResponse>>(
                                 {
                                     .metadata =
@@ -275,7 +275,7 @@ TEST_CASE("typed body routes honour optional bodies and parse error content type
   const auto omittedBodyResponse = client.Post("/synthetic-optional");
   REQUIRE(omittedBodyResponse);
   CHECK(omittedBodyResponse->status == 200);
-  CHECK(requireJsonBody<SyntheticResponse>(omittedBodyResponse->body).ok == "empty");
+  CHECK(RequireJsonBody<SyntheticResponse>(omittedBodyResponse->body).ok == "empty");
 
   const auto invalidBodyResponse = client.Post("/synthetic-optional", "{", "application/json");
   REQUIRE(invalidBodyResponse);
@@ -285,17 +285,17 @@ TEST_CASE("typed body routes honour optional bodies and parse error content type
 
 TEST_CASE("shared OpenAPI endpoint registration serves success and generic failure JSON", "[server][shared][core]")
 {
-  const auto successServer = startTestServer(
+  const auto successServer = StartTestServer(
       [](httplib::Server &server)
       {
-        clam::registerOpenApiJsonEndpoint(
+        clam::RegisterOpenApiJsonEndpoint(
             server,
             []
             {
-              return std::expected<clam::OpenApiJson, std::string>(clam::makeObject({
+              return std::expected<clam::OpenApiJson, std::string>(clam::MakeObject({
                   {"openapi", "3.1.0"},
-                  {"info", clam::makeObject({{"title", "Synthetic API"}, {"version", "0.0.1"}})},
-                  {"paths", clam::makeObject({})},
+                  {"info", clam::MakeObject({{"title", "Synthetic API"}, {"version", "0.0.1"}})},
+                  {"paths", clam::MakeObject({})},
               }));
             });
       });
@@ -305,10 +305,10 @@ TEST_CASE("shared OpenAPI endpoint registration serves success and generic failu
   REQUIRE(successResponse);
   CHECK(successResponse->status == 200);
 
-  const auto failureServer = startTestServer(
+  const auto failureServer = StartTestServer(
       [](httplib::Server &server)
       {
-        clam::registerOpenApiJsonEndpoint(
+        clam::RegisterOpenApiJsonEndpoint(
             server, [] { return std::unexpected(std::string("synthetic failure")); }, "/synthetic-openapi.json");
       });
 
@@ -316,7 +316,7 @@ TEST_CASE("shared OpenAPI endpoint registration serves success and generic failu
   const auto failureResponse = failureClient.Get("/synthetic-openapi.json");
   REQUIRE(failureResponse);
   CHECK(failureResponse->status == 500);
-  const auto failureBody = requireObject(requireJsonBody<clam::OpenApiJson>(failureResponse->body), "failure body");
-  CHECK(requireString(failureBody.at("error"), "error") == "openapi_generation_failed");
-  CHECK(requireString(failureBody.at("detail"), "detail") == "synthetic failure");
+  const auto failureBody = RequireObject(RequireJsonBody<clam::OpenApiJson>(failureResponse->body), "failure body");
+  CHECK(RequireString(failureBody.at("error"), "error") == "openapi_generation_failed");
+  CHECK(RequireString(failureBody.at("detail"), "detail") == "synthetic failure");
 }

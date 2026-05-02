@@ -7,16 +7,16 @@
 #include "demo/cat_api_routes.hpp"
 #include "demo/openapi_demo.hpp"
 
-void registerCatApiRoutes(httplib::Server &server)
+void RegisterCatApiRoutes(httplib::Server &server)
 {
-  clam::registerOpenApiJsonEndpoint(server, [] { return buildCatLogOpenApiSpec(); });
-  clam::registerRoutes(server, makeCatApiRoutes());
+  clam::RegisterOpenApiJsonEndpoint(server, [] { return BuildCatLogOpenApiSpec(); });
+  clam::RegisterRoutes(server, MakeCatApiRoutes());
 }
 
-std::expected<void, std::string> serveCatApi(const CatApiServerOptions &options)
+std::expected<void, std::string> ServeCatApi(const CatApiServerOptions &options)
 {
   httplib::Server server;
-  registerCatApiRoutes(server);
+  RegisterCatApiRoutes(server);
 
   if (!server.listen(options.host, options.port))
   {

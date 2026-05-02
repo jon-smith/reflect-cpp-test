@@ -17,12 +17,12 @@ using JsonObject = Json::Object;
 using ExpectedJson = std::expected<Json, std::string>;
 using ExpectedVoid = std::expected<void, std::string>;
 
-Json makeArray(const std::initializer_list<Json> values)
+Json MakeArray(const std::initializer_list<Json> values)
 {
   return JsonArray(values);
 }
 
-ExpectedJson parseJson(const std::string &json)
+ExpectedJson ParseJson(const std::string &json)
 {
   const auto result = rfl::json::read<Json>(json);
   if (!result)
@@ -32,7 +32,7 @@ ExpectedJson parseJson(const std::string &json)
   return result.value();
 }
 
-ExpectedVoid rewriteSchemaRefs(Json &node)
+ExpectedVoid RewriteSchemaRefs(Json &node)
 {
   if (const auto objectResult = node.to_object(); objectResult)
   {
@@ -40,7 +40,7 @@ ExpectedVoid rewriteSchemaRefs(Json &node)
 
     if (object.count("$ref") != 0U)
     {
-      const auto ref = toString(object.at("$ref"), "$ref");
+      const auto ref = ToString(object.at("$ref"), "$ref");
       if (!ref)
       {
         return std::unexpected(ref.error());
@@ -53,7 +53,7 @@ ExpectedVoid rewriteSchemaRefs(Json &node)
 
     for (auto &[_, value] : object)
     {
-      const auto rewritten = rewriteSchemaRefs(value);
+      const auto rewritten = RewriteSchemaRefs(value);
       if (!rewritten)
       {
         return rewritten;
@@ -69,7 +69,7 @@ ExpectedVoid rewriteSchemaRefs(Json &node)
     auto array = arrayResult.value();
     for (auto &value : array)
     {
-      const auto rewritten = rewriteSchemaRefs(value);
+      const auto rewritten = RewriteSchemaRefs(value);
       if (!rewritten)
       {
         return rewritten;
@@ -81,25 +81,25 @@ ExpectedVoid rewriteSchemaRefs(Json &node)
   return {};
 }
 
-Json schemaRef(const std::string &name)
+Json SchemaRef(const std::string &name)
 {
-  return makeObject({{"$ref", "#/components/schemas/" + name}});
+  return MakeObject({{"$ref", "#/components/schemas/" + name}});
 }
 
-Json makeContentObject(const std::string &contentType, const Json &schema)
+Json MakeContentObject(const std::string &contentType, const Json &schema)
 {
-  return makeObject({{contentType, makeObject({{"schema", schema}})}});
+  return MakeObject({{contentType, MakeObject({{"schema", schema}})}});
 }
 
-Json makeResponseObject(const OpenApiResponse &response)
+Json MakeResponseObject(const OpenApiResponse &response)
 {
-  return makeObject({{"description", response.description},
-                     {"content", makeContentObject(response.contentType, schemaRef(response.schemaName))}});
+  return MakeObject({{"description", response.description},
+                     {"content", MakeContentObject(response.contentType, SchemaRef(response.schemaName))}});
 }
 
-Json makeParameterObject(const OpenApiParameter &parameter)
+Json MakeParameterObject(const OpenApiParameter &parameter)
 {
-  return makeObject({
+  return MakeObject({
       {"name", parameter.name},
       {"in", parameter.in},
       {"required", parameter.required},
@@ -108,7 +108,7 @@ Json makeParameterObject(const OpenApiParameter &parameter)
   });
 }
 
-Json makeOperationObject(const OpenApiOperation &operation)
+Json MakeOperationObject(const OpenApiOperation &operation)
 {
   JsonObject object;
   object["summary"] = operation.summary;
@@ -119,29 +119,29 @@ Json makeOperationObject(const OpenApiOperation &operation)
     JsonArray parameters;
     for (const auto &parameter : operation.parameters)
     {
-      parameters.emplace_back(makeParameterObject(parameter));
+      parameters.emplace_back(MakeParameterObject(parameter));
     }
     object["parameters"] = std::move(parameters);
   }
 
   if (operation.requestBody)
   {
-    object["requestBody"] = makeObject({{"required", operation.requestBody->required},
-                                        {"content", makeContentObject(operation.requestBody->contentType,
-                                                                      schemaRef(operation.requestBody->schemaName))}});
+    object["requestBody"] = MakeObject({{"required", operation.requestBody->required},
+                                        {"content", MakeContentObject(operation.requestBody->contentType,
+                                                                      SchemaRef(operation.requestBody->schemaName))}});
   }
 
   JsonObject responses;
   for (const auto &response : operation.responses)
   {
-    responses[response.statusCode] = makeResponseObject(response);
+    responses[response.statusCode] = MakeResponseObject(response);
   }
   object["responses"] = std::move(responses);
 
   return object;
 }
 
-Json makePathsObject(const std::vector<OpenApiPathItem> &paths)
+Json MakePathsObject(const std::vector<OpenApiPathItem> &paths)
 {
   JsonObject pathObjects;
   for (const auto &pathItem : paths)
@@ -149,7 +149,7 @@ Json makePathsObject(const std::vector<OpenApiPathItem> &paths)
     JsonObject operations;
     for (const auto &binding : pathItem.operations)
     {
-      operations[binding.method] = makeOperationObject(binding.operation);
+      operations[binding.method] = MakeOperationObject(binding.operation);
     }
     pathObjects[pathItem.path] = std::move(operations);
   }
@@ -159,7 +159,7 @@ Json makePathsObject(const std::vector<OpenApiPathItem> &paths)
 
 }
 
-OpenApiJson makeObject(const std::initializer_list<std::pair<std::string, OpenApiJson>> fields)
+OpenApiJson MakeObject(const std::initializer_list<std::pair<std::string, OpenApiJson>> fields)
 {
   JsonObject object;
   for (const auto &[key, value] : fields)
@@ -169,7 +169,7 @@ OpenApiJson makeObject(const std::initializer_list<std::pair<std::string, OpenAp
   return object;
 }
 
-OpenApiExpectedJsonObject toObject(const OpenApiJson &json, const std::string_view context)
+OpenApiExpectedJsonObject ToObject(const OpenApiJson &json, const std::string_view context)
 {
   const auto result = json.to_object();
   if (!result)
@@ -179,7 +179,7 @@ OpenApiExpectedJsonObject toObject(const OpenApiJson &json, const std::string_vi
   return result.value();
 }
 
-OpenApiExpectedString toString(const OpenApiJson &json, const std::string_view context)
+OpenApiExpectedString ToString(const OpenApiJson &json, const std::string_view context)
 {
   const auto result = json.to_string();
   if (!result)
@@ -189,7 +189,7 @@ OpenApiExpectedString toString(const OpenApiJson &json, const std::string_view c
   return result.value();
 }
 
-OpenApiExpectedBool containsSchemaRef(const OpenApiJson &node, const std::string &targetRef)
+OpenApiExpectedBool ContainsSchemaRef(const OpenApiJson &node, const std::string &targetRef)
 {
   if (const auto objectResult = node.to_object(); objectResult)
   {
@@ -197,7 +197,7 @@ OpenApiExpectedBool containsSchemaRef(const OpenApiJson &node, const std::string
 
     if (object.count("$ref") != 0U)
     {
-      const auto ref = toString(object.at("$ref"), "$ref");
+      const auto ref = ToString(object.at("$ref"), "$ref");
       if (!ref)
       {
         return std::unexpected(ref.error());
@@ -210,7 +210,7 @@ OpenApiExpectedBool containsSchemaRef(const OpenApiJson &node, const std::string
 
     for (const auto &[_, value] : object)
     {
-      const auto contains = containsSchemaRef(value, targetRef);
+      const auto contains = ContainsSchemaRef(value, targetRef);
       if (!contains)
       {
         return std::unexpected(contains.error());
@@ -227,7 +227,7 @@ OpenApiExpectedBool containsSchemaRef(const OpenApiJson &node, const std::string
     const auto array = arrayResult.value();
     for (const auto &value : array)
     {
-      const auto contains = containsSchemaRef(value, targetRef);
+      const auto contains = ContainsSchemaRef(value, targetRef);
       if (!contains)
       {
         return std::unexpected(contains.error());
@@ -242,7 +242,7 @@ OpenApiExpectedBool containsSchemaRef(const OpenApiJson &node, const std::string
   return false;
 }
 
-OpenApiExpectedBool arrayContainsString(const OpenApiJson &json, const std::string_view expectedValue)
+OpenApiExpectedBool ArrayContainsString(const OpenApiJson &json, const std::string_view expectedValue)
 {
   const auto array = json.to_array();
   if (!array)
@@ -252,7 +252,7 @@ OpenApiExpectedBool arrayContainsString(const OpenApiJson &json, const std::stri
 
   for (const auto &value : array.value())
   {
-    const auto stringValue = toString(value, "array value");
+    const auto stringValue = ToString(value, "array value");
     if (!stringValue)
     {
       return std::unexpected(stringValue.error());
@@ -266,12 +266,12 @@ OpenApiExpectedBool arrayContainsString(const OpenApiJson &json, const std::stri
   return false;
 }
 
-OpenApiJson stringSchema()
+OpenApiJson StringSchema()
 {
-  return makeObject({{"type", "string"}});
+  return MakeObject({{"type", "string"}});
 }
 
-OpenApiResponse errorResponse(const std::string &statusCode, const std::string &description)
+OpenApiResponse ErrorResponse(const std::string &statusCode, const std::string &description)
 {
   return OpenApiResponse{
       .statusCode = statusCode,
@@ -280,15 +280,15 @@ OpenApiResponse errorResponse(const std::string &statusCode, const std::string &
   };
 }
 
-ExpectedVoid registerGeneratedSchemaDocument(const std::string &schemaJson, JsonObject &schemas)
+ExpectedVoid RegisterGeneratedSchemaDocument(const std::string &schemaJson, JsonObject &schemas)
 {
-  const auto schemaDocument = parseJson(schemaJson);
+  const auto schemaDocument = ParseJson(schemaJson);
   if (!schemaDocument)
   {
     return std::unexpected(schemaDocument.error());
   }
 
-  const auto schemaRoot = toObject(schemaDocument.value(), "reflect-cpp JSON schema");
+  const auto schemaRoot = ToObject(schemaDocument.value(), "reflect-cpp JSON schema");
   if (!schemaRoot)
   {
     return std::unexpected(schemaRoot.error());
@@ -299,7 +299,7 @@ ExpectedVoid registerGeneratedSchemaDocument(const std::string &schemaJson, Json
     return std::unexpected("reflect-cpp JSON schema did not contain $defs.");
   }
 
-  auto definitions = toObject(schemaRoot.value().at("$defs"), "$defs");
+  auto definitions = ToObject(schemaRoot.value().at("$defs"), "$defs");
   if (!definitions)
   {
     return std::unexpected(definitions.error());
@@ -307,7 +307,7 @@ ExpectedVoid registerGeneratedSchemaDocument(const std::string &schemaJson, Json
 
   for (auto &[name, schema] : definitions.value())
   {
-    const auto rewritten = rewriteSchemaRefs(schema);
+    const auto rewritten = RewriteSchemaRefs(schema);
     if (!rewritten)
     {
       return rewritten;
@@ -318,7 +318,7 @@ ExpectedVoid registerGeneratedSchemaDocument(const std::string &schemaJson, Json
   return {};
 }
 
-std::expected<OpenApiJson, std::string> buildOpenApiSpec(const OpenApiSpecConfig &config)
+std::expected<OpenApiJson, std::string> BuildOpenApiSpec(const OpenApiSpecConfig &config)
 {
   JsonObject schemas;
   for (const auto &registerSchema : config.schemaRegistrations)
@@ -332,7 +332,7 @@ std::expected<OpenApiJson, std::string> buildOpenApiSpec(const OpenApiSpecConfig
 
   JsonObject document;
   document["openapi"] = "3.1.0";
-  document["info"] = makeObject({
+  document["info"] = MakeObject({
       {"title", config.info.title},
       {"version", config.info.version},
       {"description", config.info.description},
@@ -343,7 +343,7 @@ std::expected<OpenApiJson, std::string> buildOpenApiSpec(const OpenApiSpecConfig
     JsonArray servers;
     for (const auto &server : config.servers)
     {
-      servers.emplace_back(makeObject({
+      servers.emplace_back(MakeObject({
           {"url", server.url},
           {"description", server.description},
       }));
@@ -351,8 +351,8 @@ std::expected<OpenApiJson, std::string> buildOpenApiSpec(const OpenApiSpecConfig
     document["servers"] = std::move(servers);
   }
 
-  document["paths"] = makePathsObject(config.paths);
-  document["components"] = makeObject({{"schemas", std::move(schemas)}});
+  document["paths"] = MakePathsObject(config.paths);
+  document["components"] = MakeObject({{"schemas", std::move(schemas)}});
   return document;
 }
 
