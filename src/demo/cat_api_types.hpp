@@ -6,6 +6,8 @@
 
 #include <rfl.hpp>
 
+#include "core/openapi_builder.hpp"
+
 using DateString = rfl::Pattern<R"(^\d{4}-\d{2}-\d{2}$)", "Date">;
 using DateTimeString = rfl::Pattern<R"(^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$)", "DateTime">;
 using NonEmptyString = rfl::Validator<std::string, rfl::Size<rfl::Minimum<1>>>;
@@ -74,3 +76,20 @@ struct ErrorResponse
   rfl::Description<"Human-readable summary of the failure.", std::string> message;
   rfl::Description<"Additional debugging context when available.", std::optional<std::string>> detail;
 };
+
+#define OPENAPI_SCHEMA_TRAITS(TYPE)                                                                                    \
+  template <> struct clam::OpenApiSchemaTraits<TYPE>                                                                   \
+  {                                                                                                                    \
+    static constexpr std::string_view name = #TYPE;                                                                    \
+  }
+
+OPENAPI_SCHEMA_TRAITS(Cat);
+OPENAPI_SCHEMA_TRAITS(CatSummary);
+OPENAPI_SCHEMA_TRAITS(CreateCatRequest);
+OPENAPI_SCHEMA_TRAITS(CatLogEntry);
+OPENAPI_SCHEMA_TRAITS(CreateCatLogEntryRequest);
+OPENAPI_SCHEMA_TRAITS(CatListResponse);
+OPENAPI_SCHEMA_TRAITS(CatLogListResponse);
+OPENAPI_SCHEMA_TRAITS(ErrorResponse);
+
+#undef OPENAPI_SCHEMA_TRAITS

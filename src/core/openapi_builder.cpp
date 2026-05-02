@@ -1,9 +1,12 @@
-#include "openapi_builder.hpp"
+#include "core/openapi_builder.hpp"
 
 #include <expected>
 #include <initializer_list>
 #include <string>
 #include <string_view>
+
+namespace clam
+{
 
 namespace
 {
@@ -291,6 +294,11 @@ ExpectedVoid registerGeneratedSchemaDocument(const std::string &schemaJson, Json
     return std::unexpected(schemaRoot.error());
   }
 
+  if (schemaRoot.value().count("$defs") == 0U)
+  {
+    return std::unexpected("reflect-cpp JSON schema did not contain $defs.");
+  }
+
   auto definitions = toObject(schemaRoot.value().at("$defs"), "$defs");
   if (!definitions)
   {
@@ -346,4 +354,6 @@ std::expected<OpenApiJson, std::string> buildOpenApiSpec(const OpenApiSpecConfig
   document["paths"] = makePathsObject(config.paths);
   document["components"] = makeObject({{"schemas", std::move(schemas)}});
   return document;
+}
+
 }
