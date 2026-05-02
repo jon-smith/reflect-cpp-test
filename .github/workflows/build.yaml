@@ -18,11 +18,18 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install clang-format
-        run: sudo apt-get update && sudo apt-get install -y clang-format
+      - name: Install clang-format 22
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y clang-format-22
+          clang-format-22 --version
 
       - name: Check formatting
-        run: git ls-files '*.cpp' '*.hpp' | xargs clang-format --dry-run --Werror
+        run: git ls-files '*.cpp' '*.hpp' | xargs clang-format-22 --dry-run --Werror
 
   build:
     strategy:
