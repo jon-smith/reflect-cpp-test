@@ -10,7 +10,7 @@ namespace
 
 class MockDataStore
 {
-  static constexpr std::string MOCK_DB_CAT_ID = "senor-don-gato";
+  static constexpr std::string_view MOCK_DB_CAT_ID = "senor-don-gato";
 
   const CatSummary MockCatSummary = {
       .catId = std::string(MOCK_DB_CAT_ID),
