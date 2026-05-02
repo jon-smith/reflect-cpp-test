@@ -110,6 +110,8 @@ Test sources:
 
 ## Format
 
+Requires `clang-format` 22 (defined in CI pipelines).
+
 Apply `clang-format` to the tracked C++ files:
 
 ```sh
