@@ -21,7 +21,7 @@ using OpenApiExpectedBool = std::expected<bool, std::string>;
 
 template <typename T> struct OpenApiSchemaTraits;
 
-template <typename T> std::string openApiSchemaName()
+template <typename T> std::string OpenApiSchemaName()
 {
   return std::string(OpenApiSchemaTraits<T>::name);
 }
@@ -60,7 +60,7 @@ struct OpenApiRequestBody
     return OpenApiRequestBody{
         .required = required,
         .contentType = std::move(contentType),
-        .schemaName = openApiSchemaName<T>(),
+        .schemaName = OpenApiSchemaName<T>(),
     };
   }
 };
@@ -79,7 +79,7 @@ struct OpenApiResponse
     return OpenApiResponse{
         .statusCode = std::move(statusCode),
         .description = std::move(description),
-        .schemaName = openApiSchemaName<T>(),
+        .schemaName = OpenApiSchemaName<T>(),
         .contentType = std::move(contentType),
     };
   }
@@ -114,29 +114,29 @@ struct OpenApiSpecConfig
   std::vector<OpenApiSchemaRegistrar> schemaRegistrations;
 };
 
-OpenApiJson makeObject(std::initializer_list<std::pair<std::string, OpenApiJson>> fields);
+OpenApiJson MakeObject(std::initializer_list<std::pair<std::string, OpenApiJson>> fields);
 
-OpenApiExpectedJsonObject toObject(const OpenApiJson &json, std::string_view context);
+OpenApiExpectedJsonObject ToObject(const OpenApiJson &json, std::string_view context);
 
-OpenApiExpectedString toString(const OpenApiJson &json, std::string_view context);
+OpenApiExpectedString ToString(const OpenApiJson &json, std::string_view context);
 
-OpenApiExpectedBool containsSchemaRef(const OpenApiJson &node, const std::string &targetRef);
+OpenApiExpectedBool ContainsSchemaRef(const OpenApiJson &node, const std::string &targetRef);
 
-OpenApiExpectedBool arrayContainsString(const OpenApiJson &json, std::string_view expectedValue);
+OpenApiExpectedBool ArrayContainsString(const OpenApiJson &json, std::string_view expectedValue);
 
-OpenApiJson stringSchema();
+OpenApiJson StringSchema();
 
-OpenApiResponse errorResponse(const std::string &statusCode, const std::string &description);
+OpenApiResponse ErrorResponse(const std::string &statusCode, const std::string &description);
 
-std::expected<void, std::string> registerGeneratedSchemaDocument(const std::string &schemaJson,
+std::expected<void, std::string> RegisterGeneratedSchemaDocument(const std::string &schemaJson,
                                                                  OpenApiJson::Object &schemas);
 
-std::expected<OpenApiJson, std::string> buildOpenApiSpec(const OpenApiSpecConfig &config);
+std::expected<OpenApiJson, std::string> BuildOpenApiSpec(const OpenApiSpecConfig &config);
 
-template <typename T> OpenApiSchemaRegistrar makeOpenApiSchemaRegistration()
+template <typename T> OpenApiSchemaRegistrar MakeOpenApiSchemaRegistration()
 {
   return [](OpenApiJson::Object &schemas) -> std::expected<void, std::string>
-  { return registerGeneratedSchemaDocument(rfl::json::to_schema<T>(), schemas); };
+  { return RegisterGeneratedSchemaDocument(rfl::json::to_schema<T>(), schemas); };
 }
 
 }

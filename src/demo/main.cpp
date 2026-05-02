@@ -19,7 +19,7 @@ int main(int argc, char **argv)
   if (argc > 1 && std::string_view(argv[1]) == "--serve")
   {
     std::cout << "Starting CatLog demo server on http://localhost:8080" << std::endl;
-    const auto result = serveCatApi();
+    const auto result = ServeCatApi();
     if (!result)
     {
       std::cerr << result.error() << '\n';
@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 
   std::cout << "Building open API spec..." << std::endl;
 
-  const auto spec = buildCatLogOpenApiSpec();
+  const auto spec = BuildCatLogOpenApiSpec();
   if (!spec)
   {
     std::cerr << "failed to build OpenAPI spec: " << spec.error() << '\n';

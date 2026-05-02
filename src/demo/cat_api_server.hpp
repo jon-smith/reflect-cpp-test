@@ -11,6 +11,6 @@ struct CatApiServerOptions
   int port = 8080;
 };
 
-void registerCatApiRoutes(httplib::Server &server);
+void RegisterCatApiRoutes(httplib::Server &server);
 
-std::expected<void, std::string> serveCatApi(const CatApiServerOptions &options = {});
+std::expected<void, std::string> ServeCatApi(const CatApiServerOptions &options = {});

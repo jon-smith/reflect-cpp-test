@@ -6,5 +6,5 @@
 
 #include "core/openapi_builder.hpp"
 
-std::expected<rfl::Generic, std::string> buildCatLogOpenApiSpec();
-std::vector<std::string> validateOpenApiDemoSpec(const rfl::Generic &spec);
+std::expected<rfl::Generic, std::string> BuildCatLogOpenApiSpec();
+std::vector<std::string> ValidateOpenApiDemoSpec(const rfl::Generic &spec);
